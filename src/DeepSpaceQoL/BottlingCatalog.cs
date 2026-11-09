@@ -5,13 +5,24 @@ internal static class BottlingCatalog
 {
     internal const string BottlePrinterId = "bottle_printer";
 
+    private static GameGridInventory? MachineBay(GameItem owner)
+    {
+        // ShipSystemDirectory's two native installation bays have direct storage grids.
+        // These are traversal paths to printers, NEVER ordinary liquid/stow inventories.
+        if (owner.identifier != "machine_bay" && owner.identifier != "machine_bay_ext" ||
+            owner is GameCharacterItem || owner is GameItemElement element && element.IsDestroyed()) return null;
+        var grid = owner.contentWindow?.childElement as GameGridInventory;
+        return grid != null && ReferenceEquals(grid.GetParentItem(), owner) ? grid : null;
+    }
+
     internal static GameGridInventory? PrinterOutput(GameItem? owner)
     {
         if (owner == null || owner.identifier != BottlePrinterId || owner is GameCharacterItem ||
             owner is GameItemElement element && element.IsDestroyed()) return null;
-        // MachineBottlePrinter.CreateMachineInventoryWindow has a DIRECT grid in role output.
-        // Never recurse into power, inputs, process vessels, arbitrary wrappers or other machines.
-        var output = (owner.contentWindow?.childElement as MachineryPanelRow)?.GetPanel("output")?.content as GameGridInventory;
+        // MachineHelper.Panel wraps the output grid in ONE MachineryIntake by default.
+        // Unwrap that audited visual shell only; never recursively accept arbitrary machine content.
+        var content = (owner.contentWindow?.childElement as MachineryPanelRow)?.GetPanel("output")?.content;
+        var output = content as GameGridInventory ?? (content as MachineryIntake)?.content as GameGridInventory;
         return output != null && ReferenceEquals(output.GetParentItem(), owner) ? output : null;
     }
 
@@ -22,8 +33,8 @@ internal static class BottlingCatalog
         var entry = EmporiumEntry.Instance;
         var trade = entry?.backInvinvElement;
         if (trade != null) inventories.Add(trade);
-        // Only inspect direct machines in ordinary stock/storage, the sale counter, or visible
-        // dedicated shop fixture roots. This does not admit the loose hidden/showcase goods.
+        // Inspect direct printers and printers installed directly in the two audited machine bays.
+        // Traversing a bay must not expose its loose goods or other equipment inventories.
         var machineRoots = inventories.Concat(new GameInventory?[] { entry?.hiddenElement, entry?.showcaseElement }
             .Where(inventory => inventory != null).Select(inventory => inventory!)).Distinct().ToArray();
         foreach (var inventory in machineRoots)
@@ -34,6 +45,15 @@ internal static class BottlingCatalog
                     !GeneralHelper.IsItemEffectivelyOwned(item)) continue;
                 var output = PrinterOutput(item);
                 if (output != null) inventories.Add(output);
+                var bay = MachineBay(item);
+                if (bay == null) continue;
+                foreach (var installed in bay.childItems.ToArray())
+                {
+                    if (installed == null || !ReferenceEquals(installed.parentInventory, bay) ||
+                        !GeneralHelper.IsItemEffectivelyOwned(installed)) continue;
+                    var installedOutput = PrinterOutput(installed);
+                    if (installedOutput != null) inventories.Add(installedOutput);
+                }
             }
         }
         return inventories.Distinct().ToArray();

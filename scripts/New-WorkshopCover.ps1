@@ -44,7 +44,7 @@ try {
     Tile 76 640 '03' '一键收纳整理' '同类归位 · 当前页整理'
     Tile 524 640 '04' '同品质装瓶' '固定水罐 · 台面 · 打印机'
     $graphics.FillRectangle((Brush '#244B4A'), 76, 876, 260, 55)
-    Text 'v0.2.1 测试版' 29 '#A4F4DE' 92 884 $true
+    Text 'v0.2.2 测试版' 29 '#A4F4DE' 92 884 $true
     Text '原生 Mod API · 无需 BepInEx' 25 '#AFC0D0' 372 888
     $bitmap.Save($output, [Drawing.Imaging.ImageFormat]::Png)
     Write-Output $output

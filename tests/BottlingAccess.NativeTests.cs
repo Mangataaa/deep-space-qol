@@ -76,13 +76,22 @@ static class NativeBottlingTests
     private static MachineryPanel Panel(string role, PixelElement content)
     { var p = Native<MachineryPanel>(); p.role = role; Set(p, "content", content); return p; }
     private static MachineryPanelRow Row(params MachineryPanel[] panels)
-    { var row = Native<MachineryPanelRow>(); Set(row, "panels", panels.ToList()); return row; }
-    private static (GameItem owner, GameGridInventory output, GameGridInventory input) Printer(string id = "bottle_printer")
+    {
+        var row = Native<MachineryPanelRow>(); Set(row, "panels", panels.ToList());
+        Set(row, "linked", new List<GraphNodeStorage>());
+        foreach (var panel in panels) panel.owner = row;
+        // Exercise native CollectStorage/Relink/AddParent instead of inventing graph links.
+        row.RelinkStorage();
+        return row;
+    }
+    private static MachineryIntake Intake(PixelElement content)
+    { var intake = Native<MachineryIntake>(); Set(intake, "content", content); return intake; }
+    private static (GameItem owner, GameGridInventory output, GameGridInventory input) Printer(string id = "bottle_printer", bool wrapped = true)
     {
         var owner = Item(id, "CONTAINER_TAG", "IMPORTANT_TAG");
         var output = Grid(); var input = Grid();
-        var row = Row(Panel("power", input), Panel("output", output), Panel("control", Native<MachineryStack>()));
-        Window(owner, row); Set(output, "parent", row); Set(input, "parent", row);
+        var row = Row(Panel("power", wrapped ? Intake(input) : input), Panel("output", wrapped ? Intake(output) : output));
+        Window(owner, row);
         return (owner, output, input);
     }
     private static EmporiumEntry Store()
@@ -111,6 +120,7 @@ static class NativeBottlingTests
     {
         TestPinnedAndNativeInteraction();
         TestBoundedDiscovery();
+        TestInstalledPrinters();
         TestLocksAndOwnership();
         TestTradeAccess();
         SetStatic(typeof(EmporiumEntry), "Instance", null);
@@ -180,10 +190,11 @@ static class NativeBottlingTests
         Check(BottlingCatalog.PrinterOutput(otherMachine.owner) == null, "A different ID cannot borrow the output layout.");
         var malformed = Item("bottle_printer"); Window(malformed, Grid()); Put(store.invElement, malformed);
         Check(BottlingCatalog.PrinterOutput(malformed) == null, "Native ID with wrong window structure must fail closed.");
-        var wrapper = Native<MachineryIntake>(); Set(wrapper, "content", Grid());
+        var wrapper = Intake(Intake(Grid()));
         Window(malformed, Row(Panel("output", wrapper)));
-        Check(BottlingCatalog.PrinterOutput(malformed) == null, "Do not recurse through unexpected printer-output wrappers.");
-        var detachedOutput = Grid(); Window(malformed, Row(Panel("output", detachedOutput)));
+        Check(BottlingCatalog.PrinterOutput(malformed) == null, "Do not recurse through multiple printer-output wrappers.");
+        var detachedOutput = Grid(); var detachedRow = Row(Panel("output", Intake(detachedOutput)));
+        Window(malformed, detachedRow); Set(detachedOutput, "parent", null);
         Check(BottlingCatalog.PrinterOutput(malformed) == null, "Visual output alone cannot borrow an unrelated/unlinked inventory.");
         Set(printer.owner, "destroyed", true);
         Check(!BottlingCatalog.GetItems().Contains(outputBottle), "Destroyed printers must not expose live-looking outputs.");
@@ -193,6 +204,49 @@ static class NativeBottlingTests
         var nestedBox = Item("sec_box"); var nestedGrid = Grid(); Window(nestedBox, nestedGrid); Put(printer.output, nestedBox);
         var nestedBottle = LiquidItem("bottled_water", 750_000); Put(nestedGrid, nestedBottle);
         Check(!BottlingCatalog.GetItems().Contains(nestedBottle) && !BottlingAccess.CanUseTarget(source, nestedBottle, out _), "Never recursively open boxes inside machine outputs.");
+        var direct = Printer(wrapped: false); Put(store.invElement, direct.owner);
+        var directBottle = LiquidItem("bottled_water", 750_000); Put(direct.output, directBottle);
+        Check(BottlingAccess.CanTransfer(source, directBottle, out _), "Legacy direct output remains supported alongside the current native intake.");
+    }
+
+    private static void TestInstalledPrinters()
+    {
+        foreach (string id in new[] { "machine_bay", "machine_bay_ext" })
+        {
+            var store = Store(); var source = Source(store);
+            var bay = Item(id, "CONTAINER_TAG", "SYSTEM_TAG", "SYSTEM_TAG_UTILITY", "PINNED_TAG");
+            var machines = Grid(); Window(bay, machines); Put(store.invElement, bay);
+            var printer = Printer(); Put(machines, printer.owner);
+            var bottles = Enumerable.Range(0, 3).Select(_ => LiquidItem("large_bottled_water", 1_500_000)).ToArray();
+            Put(printer.output, bottles);
+            Check(printer.output.GetParentItem() == printer.owner && machines.GetParentItem() == bay,
+                "Native relink preserves printer and installed-bay ownership.");
+            Check(BottlingCatalog.PrinterOutput(printer.owner) == printer.output,
+                "Current MachineHelper.Panel wraps the direct output grid in exactly one intake.");
+            Check(bottles.All(BottlingCatalog.GetItems().Contains), id + " must discover all three printed bottles.");
+            Check(bottles.All(b => BottlingAccess.CanTransfer(source, b, out _)), id + " must permit all three native source/target pairs.");
+            Check(StorageCatalog.GetSources().All(g => g != machines && g != printer.output) && !StorageCatalog.IsStorage(bay),
+                "Printer-only traversal must not make the machine bay a stow/stock source or target.");
+            var loose = LiquidItem("bottled_water", 750_000); Put(machines, loose);
+            var other = Printer("water_purifier"); Put(machines, other.owner);
+            var otherBottle = LiquidItem("bottled_water", 750_000); Put(other.output, otherBottle);
+            var inputBottle = LiquidItem("bottled_water", 750_000); Put(printer.input, inputBottle);
+            Check(!BottlingCatalog.GetItems().Contains(loose) && !BottlingCatalog.GetItems().Contains(otherBottle) &&
+                !BottlingCatalog.GetItems().Contains(inputBottle), "Bay traversal only opens bottle-printer output, never loose goods, other machines or input.");
+            StorageRules.Policy(bay).ContainerLocked = true;
+            Check(!BottlingAccess.CanTransfer(source, bottles[0], out _), "An outer machine-bay mod lock still protects printer bottles.");
+            StorageRules.Policy(bay).ContainerLocked = false; bay.contentWindow.isLocked = true;
+            Check(!BottlingAccess.CanTransfer(source, bottles[0], out _), "An outer native bay window lock remains protective.");
+            bay.contentWindow.isLocked = false; Tag(bay, "IS_OWNED_TAG", false);
+            Check(!BottlingCatalog.GetItems().Contains(bottles[0]), "Nonowned machine bays cannot expose printer bottles.");
+            Tag(bay, "IS_OWNED_TAG"); Set(bay, "destroyed", true);
+            Check(!BottlingCatalog.GetItems().Contains(bottles[0]), "Destroyed machine bays cannot expose printer bottles.");
+            Set(bay, "destroyed", false); Check(BottlingAccess.CanTransfer(source, bottles[0], out _), "Restoring bay access restores filling without moving the bottles.");
+            bay.identifier = "unknown_machine_bay";
+            Check(!BottlingCatalog.GetItems().Contains(bottles[0]), "Unknown container cannot borrow installed-printer traversal.");
+            bay.identifier = id; Set(machines, "parent", null);
+            Check(!BottlingCatalog.GetItems().Contains(bottles[0]), "Unlinked machine-bay inventory cannot borrow a visual owner.");
+        }
     }
 
     private static void TestLocksAndOwnership()

@@ -5,6 +5,7 @@ param(
     [string]$PreviewPath,
     [string]$GalleryPath,
     [string]$StatePath,
+    [string]$ChangeNote,
     [ValidateSet('public', 'private')][string]$Visibility = 'public',
     [switch]$Status,
     [switch]$ValidateOnly
@@ -24,12 +25,13 @@ if ($Status) {
     if ([string]::IsNullOrWhiteSpace($StatePath)) { $StatePath = Join-Path $script:RepositoryRoot 'release\workshop-state.local.json' }
     if ([string]::IsNullOrWhiteSpace($GalleryPath)) { $GalleryPath = Join-Path $script:RepositoryRoot 'release\media\gallery' }
     [xml]$manifest = Get-Content -LiteralPath (Join-Path $package 'manifest.xml') -Raw
+    if ([string]::IsNullOrWhiteSpace($ChangeNote)) { $ChangeNote = "Deep Space QoL $($manifest.Manifest.ModVersion)" }
     $operation = if ($ValidateOnly) { '--validate' } else { '--publish' }
     $arguments += @($operation, '--game-dir', $game, '--content', $package,
         '--preview', (Resolve-Path -LiteralPath $PreviewPath).Path,
         '--description', (Join-Path $script:RepositoryRoot 'release\workshop-description.zh-CN.txt'),
         '--state', [IO.Path]::GetFullPath($StatePath), '--visibility', $Visibility,
-        '--notes', "Deep Space QoL $($manifest.Manifest.ModVersion): storage classification, automation locks and in-place bottling fixes.",
+        '--notes', $ChangeNote,
         '--gallery-dir', [IO.Path]::GetFullPath($GalleryPath))
 }
 & dotnet @arguments

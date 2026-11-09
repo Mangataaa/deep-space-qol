@@ -3,7 +3,7 @@
   <ID>deep_space_qol</ID>
   <Name>深空管家 / Deep Space QoL</Name>
   <Author>Deep Space QoL contributors</Author>
-  <ModVersion>0.2.1</ModVersion>
+  <ModVersion>0.2.2</ModVersion>
   <Description>原生标签打印机多选分类、储物窗口整理与锁定、转移按钮左侧上货箭头、水源右键装瓶。F6 保留为高级设置。</Description>
   <GameVersions><Version>0.46</Version></GameVersions>
   <Prerequisites />

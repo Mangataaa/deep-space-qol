@@ -54,7 +54,7 @@ dotnet build tests/LiquidPolicy.NativeCheck.csproj -c Release --property:BaseInt
 
 真实游戏程序集引用下的 `netstandard2.1` 编译通过，**0 警告、0 错误**。`LiquidNativeStubs.cs` 只用于单独编译时声明父模块契约，不属于生产模组。
 
-后续原地访问修复增加 `dotnet run --project tests/BottlingAccess.NativeTests.csproj -c Release`：**74 项检查通过**，执行实际游戏程序集和生产目录/访问/锁定代码；不执行 Unity 场景或液体动作。原液体策略 6,027 项检查仍通过。
+后续原地访问修复增加 `dotnet run --project tests/BottlingAccess.NativeTests.csproj -c Release`：0.2.2 扩展至 **101 项检查通过**，执行实际游戏程序集和生产目录/访问/锁定代码，涵盖单层原生 intake 及两种机器舱中的打印机；不执行 Unity 场景或液体动作。原液体策略 6,027 项检查仍通过。
 
 ## 尚需游戏内验收
 

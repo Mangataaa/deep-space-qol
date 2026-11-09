@@ -4,7 +4,7 @@
 
 菜单的 `TryReady` 现在在确认玩家操作状态后直接调用 `BottlingService.CanUseSource`，与真正执行使用同一水源权限和液体检查。移除了菜单中重复的 `StorageRules.CanAutomate` 检查，避免固定水源因“不能移动”被禁用。`PINNED_TAG` 不被移除，原地分装仍遵守自有、祖先锁、原生液体交互和液体兼容规则。
 
-独立装瓶目录增加交易称重区自有瓶与真实 `bottle_printer` 的直接成品输出网格，未更改收纳/上货的普通目录。菜单提示同步说明新范围；F6 备用水源列表也使用装瓶目录。细节及原生权限测试见 `bottling-access-evidence.md`。
+独立装瓶目录增加交易称重区自有瓶与真实 `bottle_printer` 的成品输出网格。0.2.2 修正单层原生 intake 包装，并定位两种原生机器舱中的打印机；未更改收纳/上货普通目录。菜单提示同步说明范围；F6 备用水源列表也使用装瓶目录。细节见 `bottling-access-evidence.md`。
 
 ## 交付范围与集成
 
