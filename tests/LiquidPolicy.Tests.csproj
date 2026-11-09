@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><Nullable>disable</Nullable></PropertyGroup>
+  <ItemGroup><Compile Include="LiquidPolicyTests.cs"/><Compile Include="../src/DeepSpaceQoL/Core/LiquidQualityPolicy.cs" Link="LiquidQualityPolicy.cs"/></ItemGroup>
+</Project>

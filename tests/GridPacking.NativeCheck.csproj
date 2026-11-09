@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup><BaseIntermediateOutputPath>obj/GridPacking.NativeCheck/</BaseIntermediateOutputPath><MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath></PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup><TargetFramework>netstandard2.1</TargetFramework><LangVersion>latest</LangVersion><EnableDefaultCompileItems>false</EnableDefaultCompileItems><Nullable>enable</Nullable><GameDir Condition="'$(GameDir)' == ''">D:\SteamLibrary\steamapps\common\Probably Stolen</GameDir><ManagedDir>$(GameDir)\Probably Stolen_Data\Managed</ManagedDir></PropertyGroup>
+  <ItemGroup><Compile Include="../src/DeepSpaceQoL/ArrangeService.cs" Link="ArrangeService.cs"/><Compile Include="../src/DeepSpaceQoL/Core/GridPacking.cs" Link="GridPacking.cs"/></ItemGroup>
+  <ItemGroup><Reference Include="Assembly-CSharp"><HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference><Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference></ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup><BaseIntermediateOutputPath>obj/GridPacking.Tests/</BaseIntermediateOutputPath><MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath></PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><Nullable>enable</Nullable></PropertyGroup>
+  <ItemGroup><Compile Include="GridPackingTests.cs"/><Compile Include="../src/DeepSpaceQoL/Core/GridPacking.cs" Link="GridPacking.cs"/></ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

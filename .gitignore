@@ -1,0 +1,19 @@
+.tools/
+reference/
+**/bin/
+**/obj/
+game-types.txt
+game-assembly-evidence.json
+artifacts/
+*.user
+
+# Private publishing state, credentials, saves, logs and release archives.
+*.local.json
+*.local.json.*
+.env
+.env.*
+*.es3
+*.log
+*.dmp
+*.zip
+docs/IMPLEMENTATION.md
