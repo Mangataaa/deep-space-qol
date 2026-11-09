@@ -6,9 +6,9 @@
 - 0.2.2 测试版附件：[v0.2.2 Release](https://github.com/Mangataaa/deep-space-qol/releases/tag/v0.2.2)
 - Steam 公开条目：[深空管家 / Deep Space QoL](https://steamcommunity.com/sharedfiles/filedetails/?id=3836735823)，工坊 ID `3836735823`，游戏 App ID `4348910`。
 
-2026-11-09 更新至 0.2.2。Steam 返回上传成功，匿名公开接口确认条目公开、未封禁，内容大小 141,615 字节；详情页增加四张用户实机截图，保持同一工坊 ID。GitHub Release 为 prerelease，ZIP SHA-256 为 `4149ae1adc7f4c85dfd1086bcceb0e70f4b4bc0e31ae14be1d18311d0000ce07`，与远端附件摘要一致。
+2026-11-09 更新至 0.2.2。Steam 返回上传成功，匿名公开接口确认条目公开、未封禁，内容大小 141,615 字节；展示页使用六张用户实机截图，保持同一工坊 ID。GitHub Release 为 prerelease，ZIP SHA-256 为 `4149ae1adc7f4c85dfd1086bcceb0e70f4b4bc0e31ae14be1d18311d0000ce07`，与远端附件摘要一致。随后补图仅更新展示信息，保留原安装包及校验值。
 
-展示图来自 0.2.1 的上货、分类及同一储物页整理前后，标题栏明确来源版本；第五张打印机遗漏截图只用于故障分析，不作为打印机修正成功的效果图。0.2.2 打印机修正仍需实机复测。
+前四张展示 0.2.1 的上货、分类及同一储物页整理前后；后两张展示 0.2.2 固定水源的右键入口与装瓶前后。用户复测截图显示台面两瓶和机器舱内打印机成品区两瓶均由空瓶变为装水状态，提示“已装 4 瓶，共 8000 毫升”。这确认该场景修正通过，不扩展为完整兼容性或存档验收。
 
 ## 内容边界
 
@@ -27,7 +27,7 @@ GitHub 版本附件使用 `scripts/Package.ps1` 验证的成品目录打 ZIP，�
 5. 固定水源的右键“一键装瓶”菜单。
 6. 交易台或水瓶打印机成品区的装瓶结果。
 
-用于工坊的封面保存在 `release/media/preview.jpg` 或 `.png`，小于 1 MiB；建议正方形。现有封面是自制文字图，可通过 `scripts/New-WorkshopCover.ps1` 重建，不模拟实机画面。`scripts/New-WorkshopGallery.ps1` 接受四张实际截图，保留完整游戏画面并在图外加版本说明；输出位于 `release/media/gallery/`。原始未处理截图可放在忽略的 `artifacts/`。
+用于工坊的封面保存在 `release/media/preview.jpg` 或 `.png`，小于 1 MiB；建议正方形。现有封面是自制文字图，可通过 `scripts/New-WorkshopCover.ps1` 重建，不模拟实机画面。`scripts/New-WorkshopGallery.ps1` 接受原四图或新增装瓶前后图对，保留完整游戏画面并在图外加版本说明；输出位于 `release/media/gallery/`。原始未处理截图可放在忽略的 `artifacts/`。
 
 ## 独立上传工具
 
@@ -45,7 +45,9 @@ dotnet run --project tools/WorkshopPublisher -c Release -- --status --game-dir '
 .\scripts\Publish-Workshop.ps1 -PackagePath '已验证的 deep_space_qol 成品目录' -PreviewPath '封面图片完整路径'
 ```
 
-默认公开发布；只想先检查可加 `-ValidateOnly`，只想检查登录可加 `-Status`。上传工具记录工坊 ID、账号归属与远端状态到被忽略的 `release/workshop-state.local.json`。后续更新复用 ID，不自动创建新条目；创建结果不明时停止并要求先核对远端。已有展示图时不覆盖或重复追加展示图。
+默认公开发布；只想先检查可加 `-ValidateOnly`，只想检查登录可加 `-Status`。上传工具记录工坊 ID、账号归属与远端状态到被忽略的 `release/workshop-state.local.json`。后续更新复用 ID，不自动创建新条目；创建结果不明时停止并要求先核对远端。工坊追加图片按远端原文件名去重，保留已有图片；相同文件名不会覆盖或重复上传。
+
+仅补图片和说明时加 `-MetadataOnly`：要求已有条目及相同发布版本、DLL 哈希，不重新上传安装内容，也不改本地游戏安装。
 
 Steam 把各语言版本说明分开保存；工具在内容上传后用独立、仅改文字的更新，把同一份说明同步到默认英语回退，避免匿名 API 或英语界面仍显示旧版本号。这里同步的是中文原文，没有声称提供英文翻译。默认语言同步失败会保留待完成状态，不能报告整项完成。
 

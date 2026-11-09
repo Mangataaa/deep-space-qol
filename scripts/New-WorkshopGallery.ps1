@@ -1,21 +1,35 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][string]$StockingImage,
-    [Parameter(Mandatory)][string]$LabelsImage,
-    [Parameter(Mandatory)][string]$BeforeImage,
-    [Parameter(Mandatory)][string]$AfterImage,
+    [string]$StockingImage,
+    [string]$LabelsImage,
+    [string]$BeforeImage,
+    [string]$AfterImage,
+    [string]$BottlingBeforeImage,
+    [string]$BottlingAfterImage,
     [string]$OutputDirectory = (Join-Path (Split-Path -Parent $PSScriptRoot) 'release\media\gallery')
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 $null = New-Item -ItemType Directory -Path $OutputDirectory -Force
-$images = @(
-    @{ Path = $StockingImage; Name = '01-budget-stocking.jpg'; Title = '按买家需求与预算，一键上货' },
-    @{ Path = $LabelsImage; Name = '02-storage-labels.jpg'; Title = '原生标签打印机：分类多选与页／箱锁' },
-    @{ Path = $BeforeImage; Name = '03-before-arrange.jpg'; Title = '同一储物页：整理前' },
-    @{ Path = $AfterImage; Name = '04-after-arrange.jpg'; Title = '同一储物页：整理后' }
-)
+$images = @()
+if ($StockingImage -or $LabelsImage -or $BeforeImage -or $AfterImage) {
+    if (-not ($StockingImage -and $LabelsImage -and $BeforeImage -and $AfterImage)) { throw 'Provide all four original gallery images together.' }
+    $images += @(
+        @{ Path = $StockingImage; Name = '01-budget-stocking.jpg'; Title = '按买家需求与预算，一键上货'; Version = '0.2.1' },
+        @{ Path = $LabelsImage; Name = '02-storage-labels.jpg'; Title = '原生标签打印机：分类多选与页／箱锁'; Version = '0.2.1' },
+        @{ Path = $BeforeImage; Name = '03-before-arrange.jpg'; Title = '同一储物页：整理前'; Version = '0.2.1' },
+        @{ Path = $AfterImage; Name = '04-after-arrange.jpg'; Title = '同一储物页：整理后'; Version = '0.2.1' }
+    )
+}
+if ($BottlingBeforeImage -or $BottlingAfterImage) {
+    if (-not ($BottlingBeforeImage -and $BottlingAfterImage)) { throw 'Provide both bottling screenshots together.' }
+    $images += @(
+        @{ Path = $BottlingBeforeImage; Name = '05-before-bottling.jpg'; Title = '固定水源右键装瓶：操作前'; Version = '0.2.2' },
+        @{ Path = $BottlingAfterImage; Name = '06-after-bottling.jpg'; Title = '交易台与打印机成品瓶：装瓶后（4 瓶）'; Version = '0.2.2' }
+    )
+}
+if ($images.Count -eq 0) { throw 'Provide a gallery image set or a bottling image pair.' }
 $encoder = [Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object MimeType -EQ 'image/jpeg'
 foreach ($entry in $images) {
     $source = [Drawing.Image]::FromFile((Resolve-Path -LiteralPath $entry.Path).Path)
@@ -31,7 +45,7 @@ foreach ($entry in $images) {
         $graphics.Clear([Drawing.ColorTranslator]::FromHtml('#101D2E'))
         $graphics.TextRenderingHint = [Drawing.Text.TextRenderingHint]::AntiAliasGridFit
         $graphics.DrawString($entry.Title, $titleFont, $white, [single]26, [single]9)
-        $graphics.DrawString('深空管家 / Deep Space QoL · 用户实机截图 · v0.2.1', $versionFont, $muted, [single]28, [single]49)
+        $graphics.DrawString(('深空管家 / Deep Space QoL · 用户实机截图 · v' + $entry.Version), $versionFont, $muted, [single]28, [single]49)
         $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
         # Preserve the full original screenshot; the caption sits outside the game image.
         $ratio = [Math]::Min(1600.0 / $source.Width, 900.0 / $source.Height)

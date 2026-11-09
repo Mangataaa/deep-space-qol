@@ -17,4 +17,7 @@
 
 装瓶访问回归 101 项通过：先用接近原生包装的结构复现旧版失败，再验证两种机器舱中的三只打印机成品瓶均被发现且通过原生配对权限。离线测试不运行 Unity 场景或实际液体转移。
 
-七套回归与原生模组扫描通过。已有上货、标签与整理实机截图来自用户的 0.2.1；**本次打印机修正仍待游戏内复测**，继续标记为测试版。
+七套回归与原生模组扫描通过。上货、标签与整理实机截图来自用户的 0.2.1。**用户已在 0.2.2 实机复测确认：固定水源右键装瓶后，交易台两瓶和机器舱内打印机成品区两瓶均装上水，提示共装 4 瓶。** 完整存档往返与其他模组兼容性仍未全面验证，继续标记为测试版。
+
+![固定水源右键装瓶：操作前](https://raw.githubusercontent.com/Mangataaa/deep-space-qol/main/release/media/gallery/05-before-bottling.jpg)
+![台面与打印机四瓶装水后](https://raw.githubusercontent.com/Mangataaa/deep-space-qol/main/release/media/gallery/06-after-bottling.jpg)

@@ -4,7 +4,7 @@
 
 [Steam 创意工坊订阅](https://steamcommunity.com/sharedfiles/filedetails/?id=3836735823) · [GitHub 测试版下载](https://github.com/Mangataaa/deep-space-qol/releases/tag/v0.2.2) · [问题反馈](https://github.com/Mangataaa/deep-space-qol/issues)
 
-适配目标是开发时本机安装的 0.46 系列游戏程序集。已进行真实程序集编译、核心算法及原生规则回归测试、原生模组扫描；下方 0.2.1 实机截图展示上货、分类和整理效果。**0.2.2 的打印机装瓶修正仍待游戏内复测**。
+适配目标是开发时本机安装的 0.46 系列游戏程序集。已进行真实程序集编译、核心算法及原生规则回归测试、原生模组扫描。用户提供了上货、分类及整理截图，并在 **0.2.2 实机复测确认交易台与机器舱内打印机的四只空瓶均完成装水**；完整存档往返及其他模组兼容性尚未全面验证。
 
 ## 安装与开始使用
 
@@ -87,12 +87,14 @@
 
 ## 实机截图
 
-以下由用户在 0.2.1 提供，展示已观察到的上货、标签与整理操作，不代表 0.2.2 打印机修正已实机通过。
+前四张为用户的 0.2.1 上货、标签与整理截图；后两张为 0.2.2 装瓶复测，展示固定水源右键入口，以及台面两瓶和打印机成品区两瓶从空瓶变为装水后的状态。
 
 ![按买家预算上货](release/media/gallery/01-budget-stocking.jpg)
 ![标签打印机多选分类](release/media/gallery/02-storage-labels.jpg)
 ![同一储物页整理前](release/media/gallery/03-before-arrange.jpg)
 ![同一储物页整理后](release/media/gallery/04-after-arrange.jpg)
+![固定水源右键装瓶：操作前](release/media/gallery/05-before-bottling.jpg)
+![交易台与打印机成品瓶：四瓶装水后](release/media/gallery/06-after-bottling.jpg)
 
 ## 构建、打包、重装和卸载
 

@@ -8,6 +8,7 @@ param(
     [string]$ChangeNote,
     [ValidateSet('public', 'private')][string]$Visibility = 'public',
     [switch]$Status,
+    [switch]$MetadataOnly,
     [switch]$ValidateOnly
 )
 . (Join-Path $PSScriptRoot 'Common.ps1')
@@ -33,6 +34,7 @@ if ($Status) {
         '--state', [IO.Path]::GetFullPath($StatePath), '--visibility', $Visibility,
         '--notes', $ChangeNote,
         '--gallery-dir', [IO.Path]::GetFullPath($GalleryPath))
+    if ($MetadataOnly) { $arguments += '--metadata-only' }
 }
 & dotnet @arguments
 if ($LASTEXITCODE -eq 4) { throw 'Steam requires the account owner to accept the Workshop legal agreement. Follow the official item URL above, then rerun the same command; its ID is preserved.' }

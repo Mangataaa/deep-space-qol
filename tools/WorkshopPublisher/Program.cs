@@ -40,6 +40,7 @@ internal static class Program
 
             bool statusOnly = options.ContainsKey("status");
             bool validateOnly = options.ContainsKey("validate");
+            bool metadataOnly = options.ContainsKey("metadata-only");
             if (!statusOnly && !validateOnly && !options.ContainsKey("publish"))
                 throw new ArgumentException("Specify --status, --validate or --publish.");
             Package? package = null;
@@ -67,6 +68,8 @@ internal static class Program
                     throw new InvalidOperationException("Previous creation has an unknown outcome. Inspect your Workshop items and restore its ID before retrying; no duplicate will be created.");
                 if (state.ItemId.Length > 0 && (!ulong.TryParse(state.ItemId, out ulong id) || id == 0))
                     throw new InvalidOperationException("Invalid persisted Workshop ID.");
+                if (metadataOnly && (state.ItemId.Length == 0 || state.Version != package.Version || state.DllSha256 != package.DllSha256))
+                    throw new InvalidOperationException("Metadata-only updates require an existing item with the same published version and DLL hash.");
                 gallery = options.TryGetValue("gallery-dir", out var folder) ? Full(folder) : "";
                 foreach (string path in GalleryImages(gallery)) ValidateImage(path);
                 Console.WriteLine($"Validated {ModId} {package.Version}; DLL SHA256={package.DllSha256}; visibility={visibility}.");
@@ -129,6 +132,7 @@ internal static class Program
             var query = SteamUGC.CreateQueryUGCDetailsRequest(new[] { itemId }, 1);
             if (query == UGCQueryHandle_t.Invalid) throw new InvalidOperationException("Cannot query the persisted Workshop item.");
             uint existingPreviews;
+            var existingPreviewFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             try
             {
                 if (!SteamUGC.SetReturnAdditionalPreviews(query, true)) throw new InvalidOperationException("Cannot request preview metadata.");
@@ -144,6 +148,15 @@ internal static class Program
                     details.m_eResult != EResult.k_EResultOK || details.m_nConsumerAppID.m_AppId != AppId || details.m_ulSteamIDOwner.ToString() != owner)
                     throw new InvalidOperationException("Cannot verify Workshop item ownership and game; no update submitted.");
                 existingPreviews = SteamUGC.GetQueryUGCNumAdditionalPreviews(query, 0);
+                for (uint index = 0; index < existingPreviews; index++)
+                {
+                    if (!SteamUGC.GetQueryUGCAdditionalPreview(query, 0, index, out _, 2048, out string filename, 2048, out var kind))
+                        throw new InvalidOperationException("Cannot read existing gallery filenames; no update submitted.");
+                    if (kind != EItemPreviewType.k_EItemPreviewType_Image) continue;
+                    if (string.IsNullOrWhiteSpace(filename))
+                        throw new InvalidOperationException("Existing gallery image has no filename; cannot safely append without duplicate detection.");
+                    existingPreviewFiles.Add(Path.GetFileName(filename));
+                }
             }
             finally { SteamUGC.ReleaseQueryUGCRequest(query); }
 
@@ -159,12 +172,16 @@ internal static class Program
                 ? ERemoteStoragePublishedFileVisibility.k_ERemoteStoragePublishedFileVisibilityPublic
                 : ERemoteStoragePublishedFileVisibility.k_ERemoteStoragePublishedFileVisibilityPrivate), "visibility");
             Require(SteamUGC.SetItemMetadata(update, JsonSerializer.Serialize(new { modId = ModId, version = package.Version, dllSha256 = package.DllSha256 })), "metadata");
-            Require(SteamUGC.SetItemContent(update, package.Folder), "content");
+            if (!metadataOnly) Require(SteamUGC.SetItemContent(update, package.Folder), "content");
             Require(SteamUGC.SetItemPreview(update, preview), "preview");
-            if (existingPreviews == 0)
-                foreach (string path in GalleryImages(gallery))
+            int addedPreviews = 0;
+            foreach (string path in GalleryImages(gallery))
+                if (!existingPreviewFiles.Contains(Path.GetFileName(path)))
+                {
                     Require(SteamUGC.AddItemPreviewFile(update, path, EItemPreviewType.k_EItemPreviewType_Image), "gallery image");
-            else Console.WriteLine($"Preserving {existingPreviews} existing gallery previews; no duplicates appended.");
+                    addedPreviews++;
+                }
+            Console.WriteLine($"Preserving {existingPreviews} gallery previews; appending {addedPreviews} new images by filename; content upload={!metadataOnly}.");
             done = false;
             failed = false;
             SubmitItemUpdateResult_t submitted = default;
@@ -234,12 +251,12 @@ internal static class Program
     private static Dictionary<string, string> Parse(string[] args)
     {
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
-        var allowed = new HashSet<string> { "status", "validate", "publish", "game-dir", "content", "preview", "description", "state", "visibility", "notes", "gallery-dir" };
+        var allowed = new HashSet<string> { "status", "validate", "publish", "metadata-only", "game-dir", "content", "preview", "description", "state", "visibility", "notes", "gallery-dir" };
         for (int i = 0; i < args.Length; i++)
         {
             string key = args[i].StartsWith("--", StringComparison.Ordinal) ? args[i][2..] : throw new ArgumentException("Expected --option.");
             if (!allowed.Contains(key) || result.ContainsKey(key)) throw new ArgumentException($"Unknown or repeated option: {key}");
-            result[key] = key is "status" or "validate" or "publish" ? "true" : ++i < args.Length ? args[i] : throw new ArgumentException($"Missing value: {key}");
+            result[key] = key is "status" or "validate" or "publish" or "metadata-only" ? "true" : ++i < args.Length ? args[i] : throw new ArgumentException($"Missing value: {key}");
         }
         if (new[] { "status", "validate", "publish" }.Count(result.ContainsKey) != 1) throw new ArgumentException("Select exactly one operation.");
         return result;
