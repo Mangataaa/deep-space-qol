@@ -3,10 +3,12 @@
 ## 当前发布
 
 - GitHub 公开源码：[Mangataaa/deep-space-qol](https://github.com/Mangataaa/deep-space-qol)
-- 0.2.1 测试版附件：[v0.2.1 Release](https://github.com/Mangataaa/deep-space-qol/releases/tag/v0.2.1)
+- 0.2.2 测试版附件：[v0.2.2 Release](https://github.com/Mangataaa/deep-space-qol/releases/tag/v0.2.2)
 - Steam 公开条目：[深空管家 / Deep Space QoL](https://steamcommunity.com/sharedfiles/filedetails/?id=3836735823)，工坊 ID `3836735823`，游戏 App ID `4348910`。
 
-2026-11-09 完成发布。Steam 返回上传成功，匿名公开接口确认可见性为公开、未封禁及内容大小 139,665 字节；匿名详情页有订阅入口、封面和完整中文说明。GitHub Release 为 prerelease，ZIP SHA-256 为 `648c52e06788ca7b830893f1eb949f27bc4ed4d82618c2315b0b60ba6853df96`，与远端附件摘要一致。工坊首发使用文字封面，实机功能截图待补充。
+2026-11-09 更新至 0.2.2。Steam 返回上传成功，匿名公开接口确认条目公开、未封禁，内容大小 141,615 字节；详情页增加四张用户实机截图，保持同一工坊 ID。GitHub Release 为 prerelease，ZIP SHA-256 为 `4149ae1adc7f4c85dfd1086bcceb0e70f4b4bc0e31ae14be1d18311d0000ce07`，与远端附件摘要一致。
+
+展示图来自 0.2.1 的上货、分类及同一储物页整理前后，标题栏明确来源版本；第五张打印机遗漏截图只用于故障分析，不作为打印机修正成功的效果图。0.2.2 打印机修正仍需实机复测。
 
 ## 内容边界
 
@@ -25,7 +27,7 @@ GitHub 版本附件使用 `scripts/Package.ps1` 验证的成品目录打 ZIP，�
 5. 固定水源的右键“一键装瓶”菜单。
 6. 交易台或水瓶打印机成品区的装瓶结果。
 
-用于工坊的封面保存在 `release/media/preview.jpg` 或 `.png`，小于 1 MiB；建议正方形。现有封面是自制文字图，可通过 `scripts/New-WorkshopCover.ps1` 重建，不模拟实机画面。功能截图可随后补充至 `release/media/gallery/`。原始未处理截图可放在忽略的 `artifacts/`。
+用于工坊的封面保存在 `release/media/preview.jpg` 或 `.png`，小于 1 MiB；建议正方形。现有封面是自制文字图，可通过 `scripts/New-WorkshopCover.ps1` 重建，不模拟实机画面。`scripts/New-WorkshopGallery.ps1` 接受四张实际截图，保留完整游戏画面并在图外加版本说明；输出位于 `release/media/gallery/`。原始未处理截图可放在忽略的 `artifacts/`。
 
 ## 独立上传工具
 
@@ -44,6 +46,8 @@ dotnet run --project tools/WorkshopPublisher -c Release -- --status --game-dir '
 ```
 
 默认公开发布；只想先检查可加 `-ValidateOnly`，只想检查登录可加 `-Status`。上传工具记录工坊 ID、账号归属与远端状态到被忽略的 `release/workshop-state.local.json`。后续更新复用 ID，不自动创建新条目；创建结果不明时停止并要求先核对远端。已有展示图时不覆盖或重复追加展示图。
+
+Steam 把各语言版本说明分开保存；工具在内容上传后用独立、仅改文字的更新，把同一份说明同步到默认英语回退，避免匿名 API 或英语界面仍显示旧版本号。这里同步的是中文原文，没有声称提供英文翻译。默认语言同步失败会保留待完成状态，不能报告整项完成。
 
 Steam 若要求接受工坊协议，工具只返回条目地址和待处理状态，由账号本人在 Steam 官方页面确认，随后重跑同一命令继续上传。
 

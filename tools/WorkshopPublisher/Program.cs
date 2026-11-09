@@ -193,6 +193,33 @@ internal static class Program
             }
             state.Status = submitted.m_bUserNeedsToAcceptWorkshopLegalAgreement ? "legal-agreement-required" : "uploaded";
             Save(statePath, state);
+            if (!submitted.m_bUserNeedsToAcceptWorkshopLegalAgreement)
+            {
+                // Steam keeps language-specific descriptions. Updating schinese alone leaves
+                // anonymous API/English fallback readers on an old version. Sync the same honest
+                // Chinese text into the default language in a separate metadata-only update.
+                state.Status = "default-description-pending";
+                Save(statePath, state);
+                var fallbackUpdate = SteamUGC.StartItemUpdate(new AppId_t(AppId), itemId);
+                if (fallbackUpdate == UGCUpdateHandle_t.Invalid) throw new InvalidOperationException("Cannot synchronize default Workshop description.");
+                Require(SteamUGC.SetItemUpdateLanguage(fallbackUpdate, "english"), "default language");
+                Require(SteamUGC.SetItemTitle(fallbackUpdate, package.Title), "default title");
+                Require(SteamUGC.SetItemDescription(fallbackUpdate, description), "default description");
+                done = false;
+                failed = false;
+                SubmitItemUpdateResult_t fallbackResult = default;
+                using var fallbackCallback = CallResult<SubmitItemUpdateResult_t>.Create((result, ioFailure) =>
+                { fallbackResult = result; failed = ioFailure; done = true; });
+                var fallbackCall = SteamUGC.SubmitItemUpdate(fallbackUpdate, "");
+                if (fallbackCall == SteamAPICall_t.Invalid) throw new InvalidOperationException("Default description update did not return a valid call.");
+                fallbackCallback.Set(fallbackCall);
+                Pump(() => done, TimeSpan.FromMinutes(2));
+                if (failed || fallbackResult.m_eResult != EResult.k_EResultOK)
+                    throw new InvalidOperationException($"Content uploaded, but default description update was not confirmed: {fallbackResult.m_eResult}, IO={failed}.");
+                state.Status = fallbackResult.m_bUserNeedsToAcceptWorkshopLegalAgreement ? "legal-agreement-required" : "uploaded";
+                submitted = fallbackResult;
+                Save(statePath, state);
+            }
             Console.WriteLine($"Steam upload succeeded. Item: {ItemUrl(state)}; visibility={visibility}; status={state.Status}.");
             return submitted.m_bUserNeedsToAcceptWorkshopLegalAgreement ? 4 : 0;
         }
