@@ -1,5 +1,13 @@
 # GitHub 与 Steam 创意工坊发布
 
+## 当前发布
+
+- GitHub 公开源码：[Mangataaa/deep-space-qol](https://github.com/Mangataaa/deep-space-qol)
+- 0.2.1 测试版附件：[v0.2.1 Release](https://github.com/Mangataaa/deep-space-qol/releases/tag/v0.2.1)
+- Steam 公开条目：[深空管家 / Deep Space QoL](https://steamcommunity.com/sharedfiles/filedetails/?id=3836735823)，工坊 ID `3836735823`，游戏 App ID `4348910`。
+
+2026-11-09 完成发布。Steam 返回上传成功，匿名公开接口确认可见性为公开、未封禁及内容大小 139,665 字节；匿名详情页有订阅入口、封面和完整中文说明。GitHub Release 为 prerelease，ZIP SHA-256 为 `648c52e06788ca7b830893f1eb949f27bc4ed4d82618c2315b0b60ba6853df96`，与远端附件摘要一致。工坊首发使用文字封面，实机功能截图待补充。
+
 ## 内容边界
 
 源码仓库只包含本项目独立源码、测试、脚本、说明与经过检查的展示图。`reference/`、`.tools/`、`artifacts/`、游戏 DLL、反编译代码、存档、日志、凭据和 `*.local.json` 不提交。
