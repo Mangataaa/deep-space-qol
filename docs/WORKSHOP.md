@@ -17,7 +17,7 @@ GitHub 版本附件使用 `scripts/Package.ps1` 验证的成品目录打 ZIP，�
 5. 固定水源的右键“一键装瓶”菜单。
 6. 交易台或水瓶打印机成品区的装瓶结果。
 
-用于工坊的封面保存在 `release/media/preview.jpg` 或 `.png`，小于 1 MiB；建议正方形。展示图放在 `release/media/gallery/`。原始未处理截图可放在忽略的 `artifacts/`。
+用于工坊的封面保存在 `release/media/preview.jpg` 或 `.png`，小于 1 MiB；建议正方形。现有封面是自制文字图，可通过 `scripts/New-WorkshopCover.ps1` 重建，不模拟实机画面。功能截图可随后补充至 `release/media/gallery/`。原始未处理截图可放在忽略的 `artifacts/`。
 
 ## 独立上传工具
 
