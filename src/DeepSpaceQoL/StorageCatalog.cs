@@ -26,7 +26,7 @@ internal static class StorageCatalog
         "smuggler_bay_mini", "smuggler_bay", "smuggler_bay_mod", "hypertech_bay",
         "fanny_pack", "satchel", "kids_backpack", "kids_backpack_large", "backpack_small",
         "backpack_medium", "backpack_medium_military", "backpack_large", "backpack_large_military",
-        "sec_box", "evidence_box", "lou_locker", "med_box", "eng_box", "service_box", "beerCase",
+        "sec_box", "evidence_box", "med_box", "eng_box", "service_box", "beerCase",
         // Still registered legacy containers have the same direct-grid storage contract.
         "lootbox_small", "lootbox_medium", "lootbox_large", "safe", "large_storage_bay",
         "pouch_general", "pouch_general_large", "firstaid_box"
@@ -83,6 +83,7 @@ internal static class StorageCatalog
     public static bool IsStorage(GameItem item) => PagesOf(item).Count != 0;
 
     private static bool HasStorageIdentity(GameItem owner) => owner != null &&
+        !StorageRules.IsQuestItem(owner) &&
         owner.identifier != null && StorageIdentifiers.Contains(owner.identifier) &&
         !(owner is GameCharacterItem) && !owner.IsGameItemType("MACHINE");
 

@@ -11,8 +11,8 @@ internal static class StowService
     internal sealed class SourceScan
     {
         public List<GameItem> Candidates { get; } = new();
-        public int Pinned, Locked, Equipment, Unowned, Restricted;
-        public string Summary => $"跳过固定 {Pinned} 件、锁定 {Locked} 件、设备/箱体 {Equipment} 件、非自有 {Unowned} 件、原生不可移 {Restricted} 件。";
+        public int Pinned, Locked, Equipment, Unowned, Restricted, Quest;
+        public string Summary => $"跳过剧情保护 {Quest} 件、固定 {Pinned} 件、锁定 {Locked} 件、设备/箱体 {Equipment} 件、非自有 {Unowned} 件、原生不可移 {Restricted} 件。";
     }
 
     internal static StoragePage[] AutomaticTargets(IEnumerable<StoragePage> pages) =>
@@ -31,9 +31,10 @@ internal static class StowService
             foreach (var item in inventory.childItems.ToArray())
             {
                 if (item == null || !seen.Add(item) || !ReferenceEquals(item.parentInventory, inventory)) continue;
+                if (StorageRules.IsQuestItem(item) || StorageRules.IsQuestInventory(inventory)) { result.Quest++; continue; }
                 if (!GeneralHelper.IsItemOwned(item)) { result.Unowned++; continue; }
                 if (!accessible || item.IsTag("ITEM_BEHIND_LOCK_TAG") || StorageRules.Policy(item).IsSaleProtected() ||
-                    (IsPortablePackage(item) && StorageRules.HasProtectedContents(item))) { result.Locked++; continue; }
+                    ((IsPortablePackage(item) || IsCompositeGood(item)) && StorageRules.HasProtectedContents(item))) { result.Locked++; continue; }
                 if (ItemPinHelper.IsPinned(item)) { result.Pinned++; continue; }
                 if (!IsMovableStock(item)) { result.Equipment++; continue; }
                 if (!StorageRules.CanAutomate(item)) { result.Restricted++; continue; }
@@ -52,8 +53,10 @@ internal static class StowService
         var items = scan.Candidates
             .OrderBy(i => i.identifier, StringComparer.Ordinal)
             .ThenByDescending(i => i.modifiedShape?.width * i.modifiedShape?.height ?? 0).ToArray();
-        int moved = 0, left = 0, sorted = 0, alreadyStored = 0;
-        var arranged = new HashSet<GameGridInventory>();
+        int moved = 0, left = 0, alreadyStored = 0;
+        var compacted = new HashSet<GameGridInventory>();
+        var dirty = new HashSet<GameGridInventory>();
+        var sorted = new HashSet<GameGridInventory>();
         var clock = Stopwatch.StartNew();
         foreach (var item in items)
         {
@@ -79,13 +82,15 @@ internal static class StowService
                 if (clock.ElapsedMilliseconds > 2000) break;
                 if (!StorageRules.CanAutoAccess(destination.Inventory)) continue;
                 var slot = FindWholeSlot(destination.Inventory, item);
-                if (slot == null && arranged.Add(destination.Inventory))
+                if (slot == null && compacted.Add(destination.Inventory))
                 {
-                    if (ArrangeService.TryArrange(destination.Inventory, out _)) sorted++;
+                    if (ArrangeService.TryArrange(destination.Inventory, out _)) sorted.Add(destination.Inventory);
                     slot = FindWholeSlot(destination.Inventory, item);
                 }
                 if (slot == null) continue;
                 MoveWhole(item, slot);
+                dirty.Add(destination.Inventory);
+                if (current?.Owner != null) dirty.Add(current.Inventory);
                 moved++;
                 placed = true;
                 break;
@@ -96,9 +101,12 @@ internal static class StowService
         foreach (var page in targets)
         {
             if (clock.ElapsedMilliseconds > 2500) break;
-            if (StorageRules.CanAutoAccess(page.Inventory) && arranged.Add(page.Inventory) && ArrangeService.TryArrange(page.Inventory, out _)) sorted++;
+            // Inserting after an earlier space-making pass invalidates that layout.
+            // Always tidy changed pages again once all transfers have finished.
+            if (StorageRules.CanAutoAccess(page.Inventory) && (dirty.Contains(page.Inventory) || !compacted.Contains(page.Inventory)) &&
+                ArrangeService.TryArrange(page.Inventory, out _)) sorted.Add(page.Inventory);
         }
-        return $"已收纳 {moved} 件，整理 {sorted} 页，已归位 {alreadyStored} 件；{left} 件因空间、原生限制或本轮耗时保留原处。{scan.Summary}";
+        return $"已收纳 {moved} 件，整理 {sorted.Count} 页，已归位 {alreadyStored} 件；{left} 件因空间、原生限制或本轮耗时保留原处。{scan.Summary}";
     }
 
     /// <summary>Audited consumable packages move as whole goods; their internal grids are never storage sources/targets.</summary>
@@ -106,14 +114,21 @@ internal static class StowService
         PortablePackageIdentifiers.Contains(item.identifier) && item.contentWindow?.childElement is GameGridInventory &&
         (item.IsTag("PRE_CONTAINER_TAG") || item.IsTag("STORABLE_PACKAGE_TAG"));
 
+    // Guns own functional ammunition/attachment inventories. Move the original whole
+    // item only; these windows must never become ordinary storage sources or targets.
+    internal static bool IsCompositeGood(GameItem item) => item != null &&
+        item.IsGameItemType("FIREARM") && item.contentWindow != null &&
+        !StorageCatalog.IsStorage(item);
+
     /// <summary>Move loose goods and safe portable packages, never facilities, machinery or real storage shells.</summary>
     internal static bool IsMovableStock(GameItem item) => item != null &&
         !(item is GameCharacterItem) &&
+        !StorageRules.IsQuestItem(item) &&
         !item.IsTag("SYSTEM_TAG") && !item.IsTag("SYSTEM_TAG_UTILITY") &&
         !item.IsTag("machinery") && !item.IsTag("machinery_drawn_power") && !item.IsTag("BROKEN_MACHINE_TAG") &&
         !item.IsTag("NESTABLE_DEVICE_TAG") && !item.IsTag("ITEM_BEHIND_LOCK_TAG") && !item.IsGameItemType("MACHINE") &&
         !item.IsGameItemType("STORAGE") && !item.IsTag("BACKPACK_TAG") &&
-        ((IsPortablePackage(item) && !StorageRules.HasProtectedContents(item)) ||
+        (((IsPortablePackage(item) || IsCompositeGood(item)) && !StorageRules.HasProtectedContents(item)) ||
             (item.contentWindow == null && !item.IsTag("CONTAINER_TAG") && !item.IsTag("PRE_CONTAINER_TAG")));
 
     private static SlotMarker? FindWholeSlot(GameGridInventory inventory, GameItem item)

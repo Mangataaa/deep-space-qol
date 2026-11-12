@@ -1,15 +1,47 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
+using System.Text.Json;
 using DeepSpaceQoL.Core;
 
 internal static class GridPackingTests
 {
     private static int checks;
-    public static void Main()
+    public static void Main(string[] args)
     {
-        GroupAndCompact(); FullDenseGrouping(); PinnedAndIrregular(); LayeredAndIrregularMasks(); Layers(); NativePredicate(); FailedAndTimedOut(); Randomized();
+        if (args.Length > 0) { Replay(args); return; }
+        GroupAndCompact(); FullDenseGrouping(); RepeatedBlocks(); MixedRectangles(); PinnedAndIrregular(); LayeredAndIrregularMasks(); Layers(); NativePredicate(); FailedAndTimedOut(); Randomized();
         Console.WriteLine($"GridPacking: {checks} checks passed.");
+    }
+    private static void Replay(string[] args)
+    {
+        var results = new List<object>();
+        using var document = JsonDocument.Parse(File.ReadAllText(args[0]));
+        foreach (var entry in document.RootElement.EnumerateArray())
+        {
+            int Int(JsonElement e, string name) => e.GetProperty(name).GetInt32();
+            PackingCell[] Cells(JsonElement e) => e.EnumerateArray().Select(c => new PackingCell(Int(c, "X"), Int(c, "Y"), (byte)Int(c, "Layer"))).ToArray();
+            var p = Problem(Int(entry, "Width"), Int(entry, "Height"));
+            p.Usable = entry.GetProperty("Usable").EnumerateArray().Select(e => e.GetBoolean()).ToArray();
+            p.Fixed = Cells(entry.GetProperty("Fixed"));
+            p.Items = entry.GetProperty("Items").EnumerateArray().Select(e => {
+                var o = e.GetProperty("Original");
+                return new PackingItem { Group = e.GetProperty("Group").GetString()!,
+                    Original = new PackingPlacement(Int(o, "Item"), Int(o, "X"), Int(o, "Y"), Int(o, "Shape")),
+                    Shapes = e.GetProperty("Shapes").EnumerateArray().Select(s => new PackingShape {
+                        Width = Int(s, "Width"), Height = Int(s, "Height"), Orientation = Int(s, "Orientation"), Cells = Cells(s.GetProperty("Cells")) }).ToArray() };
+            }).ToArray();
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var r = GridPacking.Solve(p);
+            Check(r.Complete && GridPacking.Validate(p, r.Placements), "Replay must conserve every real item and avoid collisions");
+            Check(r.Score <= r.OriginalScore, "Replay must not degrade baseline");
+            var name = entry.GetProperty("Name").GetString();
+            Console.WriteLine($"{name}: items={p.Items.Length}, improved={r.Improved}, score={r.OriginalScore}->{r.Score}, nodes={r.Nodes}, ms={watch.ElapsedMilliseconds}");
+            results.Add(new { name, r.Complete, r.Improved, r.OriginalScore, r.Score,
+                placements = r.Placements.Select(v => new { v.Item, v.X, v.Y, v.Shape }).ToArray() });
+        }
+        if (args.Length > 1) File.WriteAllText(args[1], JsonSerializer.Serialize(results));
     }
     private static PackingShape Rect(int width, int height, int orientation = 0) => new PackingShape {
         Width = width, Height = height, Orientation = orientation,
@@ -40,6 +72,47 @@ internal static class GridPackingTests
         Check(result.Complete && result.Improved, "full dense inventory should group within default budget");
         Check(GridPacking.Validate(p, result.Placements), "full dense output lost an item or overlapped");
     }
+    private static void RepeatedBlocks()
+    {
+        var p = Problem(17, 10);
+        p.Items = Enumerable.Range(0, 24).Select(i => Item(i, i % 2 == 0 ? "water" : "food", i % 8 * 2, i / 8 * 3,
+            Rect(2, 3), Rect(3, 2, 1))).ToArray();
+        var r = GridPacking.Solve(p);
+        Check(r.Improved && GridPacking.Validate(p, r.Placements), "Repeated goods must form complete aligned blocks within default budget");
+        foreach (var group in r.Placements.GroupBy(e => p.Items[e.Item].Group))
+        {
+            Check(group.Select(e => (p.Items[e.Item].Shapes[e.Shape].Width, p.Items[e.Item].Shapes[e.Shape].Height)).Distinct().Count() == 1,
+                "Same-shape goods should use one consistent orientation");
+            var cells = group.SelectMany(e => p.Items[e.Item].Shapes[e.Shape].Cells.Select(c => (X: e.X + c.X, Y: e.Y + c.Y))).ToArray();
+            Check((cells.Max(c => c.X) - cells.Min(c => c.X) + 1) * (cells.Max(c => c.Y) - cells.Min(c => c.Y) + 1) == cells.Length,
+                "Repeated rectangular goods should fill their group rectangle without internal gaps");
+        }
+        foreach (var e in r.Placements) p.Items[e.Item].Original = e;
+        var second = GridPacking.Solve(p);
+        Check(!second.Improved, "An already aligned compact block layout should remain stable on repeat");
+    }
+
+    private static void MixedRectangles()
+    {
+        var random = new Random(23971);
+        for (int run = 0; run < 40; run++)
+        {
+            var p = Problem(17, 10); var stock = new List<PackingItem>();
+            // Known complete shelf baseline, with alternating types, long goods and squares.
+            for (int y = 0; y < 9; y += 3)
+            for (int x = 0; x < 15; x += 3)
+            {
+                int width = random.Next(1, 4), height = random.Next(1, 4);
+                stock.Add(Item(stock.Count, "mixed" + random.Next(4), x, y, Rect(width, height), Rect(height, width, 1)));
+            }
+            p.Items = stock.ToArray();
+            var r = GridPacking.Solve(p, nodeLimit: 60000);
+            Check(r.Complete && GridPacking.Validate(p, r.Placements), "Mixed-size packing must conserve every item and never overlap");
+            Check(r.Score <= r.OriginalScore, "Mixed-size packing must never reduce measured layout quality");
+            Check(r.Nodes <= 60000, "Mixed-size packing must respect its work budget");
+        }
+    }
+
     private static void PinnedAndIrregular()
     {
         var p = Problem(5, 4); p.Usable[0] = false; p.Usable[4] = false;

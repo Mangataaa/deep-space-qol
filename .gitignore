@@ -16,4 +16,6 @@ artifacts/
 *.log
 *.dmp
 *.zip
+__pycache__/
+*.pyc
 docs/IMPLEMENTATION.md

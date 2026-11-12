@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="StorageCatalog.NativeTests.cs" />
+    <Compile Include="../src/DeepSpaceQoL/StoryProtection.cs" Link="StoryProtection.cs" />
     <Compile Include="../src/DeepSpaceQoL/StorageCatalog.cs" Link="StorageCatalog.cs" />
     <Compile Include="../src/DeepSpaceQoL/StowService.cs" Link="StowService.cs" />
     <Compile Include="../src/DeepSpaceQoL/StorageRules.cs" Link="StorageRules.cs" />

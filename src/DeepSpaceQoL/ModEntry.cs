@@ -20,7 +20,7 @@ public sealed class ModEntry : IMod
         panelKey = config.DefineEnum("panel_key", KeyCode.F6, "操作", () => "控制面板快捷键");
         stockKey = config.DefineEnum("stock_key", KeyCode.None, "操作", () => "一键上货快捷键（默认未绑定）");
         stowKey = config.DefineEnum("stow_key", KeyCode.None, "操作", () => "一键收纳快捷键（默认未绑定）");
-        Log.Log("深空管家 0.2.2：修复打印机原生输出包装及机器舱内打印机的装瓶遗漏。F6 为高级面板。");
+        Log.Log("深空管家 0.2.3：卢的剧情箱和重要物品自动保护；枪械整件收纳；同类成块整理。F6 为高级面板。");
     }
 
     public void OnEnable()

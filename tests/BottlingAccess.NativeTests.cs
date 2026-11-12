@@ -185,7 +185,13 @@ static class NativeBottlingTests
         Check(items.Contains(shownOutput) && !items.Contains(looseHidden), "Fixture-root printers may expose output, without sweeping loose hidden/showcase goods.");
         foreach (var item in new[] { inputBottle, otherBottle, unknownBottle })
         { Check(!items.Contains(item), "Do not discover input/power or another machine's apparent output."); Check(!BottlingAccess.CanUseTarget(source, item, out _), "Production access must also reject unsupported equipment locations."); }
-        Check(BottlingAccess.CanUseTarget(source, outputBottle, out _), "Actual printer output target must be usable.");
+        Check(BottlingAccess.CanUseTarget(source, outputBottle, out var outputReason), "Actual printer output target must be usable: " + outputReason);
+        Tag(printer.owner, "LOU_TOY_BOX_TAG");
+        Check(!BottlingAccess.CanUseTarget(source, outputBottle, out _), "Explicit Lou story flags must override the important-printer-shell exception.");
+        Tag(printer.owner, "LOU_TOY_BOX_TAG", false);
+        Tag(outputBottle, "LOU_TOY_TAG");
+        Check(!BottlingAccess.CanUseTarget(source, outputBottle, out _), "A protected toy bottle must never be filled even in printer output.");
+        Tag(outputBottle, "LOU_TOY_TAG", false);
         Check(StorageCatalog.GetSources().All(i => i != printer.output && i != store.backInvinvElement), "Liquid scope must not broaden movable-stock/storage discovery.");
         Check(BottlingCatalog.PrinterOutput(otherMachine.owner) == null, "A different ID cannot borrow the output layout.");
         var malformed = Item("bottle_printer"); Window(malformed, Grid()); Put(store.invElement, malformed);

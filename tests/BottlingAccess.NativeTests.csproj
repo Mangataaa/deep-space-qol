@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="BottlingAccess.NativeTests.cs" />
+    <Compile Include="../src/DeepSpaceQoL/StoryProtection.cs" Link="StoryProtection.cs" />
     <Compile Include="../src/DeepSpaceQoL/BottlingAccess.cs" Link="BottlingAccess.cs" />
     <Compile Include="../src/DeepSpaceQoL/BottlingCatalog.cs" Link="BottlingCatalog.cs" />
     <Compile Include="../src/DeepSpaceQoL/BottlingService.cs" Link="BottlingService.cs" />

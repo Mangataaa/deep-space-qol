@@ -54,7 +54,7 @@ namespace DeepSpaceQoL.Core
         // A bounded, deterministic multi-start search. A known complete original
         // is retained throughout; failed/expired searches never yield partial output.
         public static PackingResult Solve(PackingProblem problem,
-            Func<PackingPlacement, bool>? nativeAllowed = null, int milliseconds = 120, int nodeLimit = 12000)
+            Func<PackingPlacement, bool>? nativeAllowed = null, int milliseconds = 220, int nodeLimit = 240000)
         {
             CheckProblem(problem);
             var baseline = problem.Items.Select(i => i.Original).ToArray();
@@ -85,6 +85,48 @@ namespace DeepSpaceQoL.Core
                 return ok;
             }
             int pass = 0;
+            // Pack repeated rectangular goods in aligned blocks before general polyomino
+            // search. This produces visible rows/columns instead of scattered first fits.
+            // No code is imported from other mods; all identities and native vetoes survive.
+            foreach (var order in orders.Take(2))
+            {
+                if (Expired()) break;
+                var occupied = FixedOccupancy(problem);
+                var placed = new List<PackingPlacement>();
+                var groups = order.GroupBy(i => problem.Items[i].Group, StringComparer.Ordinal).Select(g => g.ToArray()).ToArray();
+                if (groups.Length > 96) continue; // Bound recursive depth even in oversized modded grids.
+                int completed = 0;
+                void Blocks(int depth)
+                {
+                    if (Expired() || completed >= 6) return;
+                    if (depth == groups.Length) { Keep(placed); completed++; return; }
+                    var group = groups[depth];
+                    var blocks = BlockCandidates(problem, group, occupied, Native, Expired, () => result.Nodes++);
+                    if (blocks.Count != 0)
+                    {
+                        foreach (var block in blocks.Take(depth < 5 ? 3 : 1))
+                        {
+                            foreach (var p in block) { placed.Add(p); Mark(problem, occupied, p, true); }
+                            Blocks(depth + 1);
+                            foreach (var p in block) { Mark(problem, occupied, p, false); placed.RemoveAt(placed.Count - 1); }
+                            if (Expired() || completed >= 6) break;
+                        }
+                    }
+                    else
+                    {
+                        int before = placed.Count;
+                        foreach (int item in group)
+                        {
+                            var choices = Candidates(problem, item, occupied, placed, Native, Expired, () => result.Nodes++, true);
+                            if (choices.Count == 0) break;
+                            var p = choices[0]; placed.Add(p); Mark(problem, occupied, p, true);
+                        }
+                        if (placed.Count - before == group.Length) Blocks(depth + 1);
+                        while (placed.Count > before) { Mark(problem, occupied, placed[placed.Count - 1], false); placed.RemoveAt(placed.Count - 1); }
+                    }
+                }
+                Blocks(0);
+            }
             foreach (var order in orders)
             {
                 if (Expired()) break;
@@ -154,11 +196,13 @@ namespace DeepSpaceQoL.Core
             List<PackingPlacement> placed, Func<PackingPlacement, bool> native, Func<bool> expired, Action count, bool firstFit = false)
         {
             var ranked = new List<(PackingPlacement placement, long rank)>();
+            // Compare all orientations at a location before going farther down the grid.
+            // The old orientation-first loop could fill a column while leaving a row empty.
+            for (int y = 0; y < p.Height; y++)
+            for (int x = 0; x < p.Width; x++)
             for (int s = 0; s < p.Items[item].Shapes.Length; s++)
             {
                 var shape = p.Items[item].Shapes[s];
-                for (int y = 0; y + shape.Height <= p.Height; y++)
-                for (int x = 0; x + shape.Width <= p.Width; x++)
                 {
                     if (expired()) return ranked.OrderBy(v => v.rank).Select(v => v.placement).Take(8).ToList();
                     count(); var candidate = new PackingPlacement(item, x, y, s);
@@ -188,6 +232,56 @@ namespace DeepSpaceQoL.Core
             return ranked.OrderBy(v => v.rank).ThenBy(v => v.placement.Shape).Take(8).Select(v => v.placement).ToList();
         }
 
+        private static List<List<PackingPlacement>> BlockCandidates(PackingProblem p, int[] items, HashSet<int> occupied,
+            Func<PackingPlacement, bool> native, Func<bool> expired, Action count)
+        {
+            if (items.Length < 2) return new List<List<PackingPlacement>>();
+            string Signature(PackingShape s) => s.Width + ":" + s.Height + ":" +
+                string.Join(",", s.Cells.OrderBy(c => c.Y).ThenBy(c => c.X).ThenBy(c => c.Layer).Select(c => c.X + "." + c.Y + "." + c.Layer));
+            var patterns = new List<(int[] shapes, int columns, int width, int height, int waste)>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var shape in p.Items[items[0]].Shapes)
+            {
+                if (shape.Cells.Length != shape.Width * shape.Height || shape.Cells.Any(c => c.Layer != 1)) continue;
+                string key = Signature(shape);
+                if (!seen.Add(key)) continue;
+                int[] shapes = items.Select(i => Array.FindIndex(p.Items[i].Shapes, s => Signature(s) == key)).ToArray();
+                if (shapes.Any(s => s < 0)) continue;
+                for (int columns = 1; columns <= Math.Min(items.Length, p.Width / shape.Width); columns++)
+                {
+                    int rows = (items.Length + columns - 1) / columns;
+                    if (rows * shape.Height > p.Height) continue;
+                    patterns.Add((shapes, columns, columns * shape.Width, rows * shape.Height,
+                        (columns * rows - items.Length) * shape.Width * shape.Height));
+                }
+            }
+            var alternatives = new List<(List<PackingPlacement> block, long rank)>();
+            foreach (var pattern in patterns.OrderBy(v => v.waste).ThenBy(v => v.height).ThenBy(v => v.width))
+            {
+            List<PackingPlacement>? best = null; long bestRank = long.MaxValue;
+            for (int y = 0; y + pattern.height <= p.Height; y++)
+            for (int x = 0; x + pattern.width <= p.Width; x++)
+            {
+                if (expired()) return alternatives.OrderBy(a => a.rank).Take(3).Select(a => a.block).ToList();
+                count();
+                long rank = y * p.Width * 1000L + pattern.waste * 200L + pattern.height * 20L + x * 10L;
+                if (rank >= bestRank) continue;
+                var block = new List<PackingPlacement>(items.Length);
+                var tile = p.Items[items[0]].Shapes[pattern.shapes[0]];
+                for (int j = 0; j < items.Length; j++)
+                {
+                    var candidate = new PackingPlacement(items[j], x + j % pattern.columns * tile.Width,
+                        y + j / pattern.columns * tile.Height, pattern.shapes[j]);
+                    if (!Fits(p, occupied, candidate) || !native(candidate)) break;
+                    block.Add(candidate);
+                }
+                if (block.Count == items.Length) { best = block; bestRank = rank; }
+            }
+            if (best != null) alternatives.Add((best, bestRank));
+            }
+            return alternatives.OrderBy(a => a.rank).Take(3).Select(a => a.block).ToList();
+        }
+
         private static readonly PackingCell[] Neighbours = { new PackingCell(-1, 0), new PackingCell(1, 0), new PackingCell(0, -1), new PackingCell(0, 1) };
         private static int Key(PackingProblem p, int x, int y, byte layer) => checked((y * p.Width + x) * 256 + layer);
         private static HashSet<int> FixedOccupancy(PackingProblem p) => new HashSet<int>(p.Fixed.Where(c => c.Layer != 0).Select(c => Key(p, c.X, c.Y, c.Layer)));
@@ -214,19 +308,53 @@ namespace DeepSpaceQoL.Core
         }
         private static long Score(PackingProblem p, IReadOnlyList<PackingPlacement> entries)
         {
-            int runs = 0, rotation = 0, last = -1; string? group = null;
+            int rotation = 0, last = -1, regions = 0, inconsistent = 0;
+            long groupWaste = 0;
             var solid = new HashSet<int>(p.Fixed.Where(c => c.Layer == 1).Select(c => c.Y * p.Width + c.X));
-            foreach (var e in entries.OrderBy(e => e.Y).ThenBy(e => e.X).ThenBy(e => e.Item))
+            var groups = new Dictionary<string, HashSet<int>>(StringComparer.Ordinal);
+            foreach (var e in entries)
             {
                 var item = p.Items[e.Item];
-                if (item.Group != group) { runs++; group = item.Group; }
                 if (e.Shape != item.Original.Shape) rotation++;
-                foreach (var c in item.Shapes[e.Shape].Cells.Where(c => c.Layer == 1)) solid.Add((e.Y + c.Y) * p.Width + e.X + c.X);
+                if (!groups.TryGetValue(item.Group, out var cells)) groups[item.Group] = cells = new HashSet<int>();
+                foreach (var c in item.Shapes[e.Shape].Cells.Where(c => c.Layer == 1))
+                { int cell = (e.Y + c.Y) * p.Width + e.X + c.X; solid.Add(cell); cells.Add(cell); }
+            }
+            foreach (var pair in groups)
+            {
+                var cells = pair.Value;
+                if (cells.Count == 0) continue;
+                groupWaste += (cells.Max(c => c % p.Width) - cells.Min(c => c % p.Width) + 1) *
+                    (cells.Max(c => c / p.Width) - cells.Min(c => c / p.Width) + 1) - cells.Count;
+                var pending = new HashSet<int>(cells);
+                int components = 0;
+                while (pending.Count > 0)
+                {
+                    components++; int first = pending.First(); pending.Remove(first);
+                    var queue = new Queue<int>(); queue.Enqueue(first);
+                    while (queue.Count > 0)
+                    {
+                        int current = queue.Dequeue(), x = current % p.Width, y = current / p.Width;
+                        foreach (var d in Neighbours)
+                        {
+                            int nx = x + d.X, ny = y + d.Y;
+                            if (nx >= 0 && nx < p.Width && ny >= 0 && ny < p.Height && pending.Remove(ny * p.Width + nx))
+                                queue.Enqueue(ny * p.Width + nx);
+                        }
+                    }
+                }
+                regions += Math.Max(0, components - 1);
+                var members = entries.Where(e => p.Items[e.Item].Group == pair.Key).ToArray();
+                var counts = members.GroupBy(e => {
+                    var s = p.Items[e.Item].Shapes[e.Shape]; return (s.Width, s.Height);
+                }).Select(g => g.Count()).ToArray();
+                inconsistent += members.Length - counts.Max();
             }
             if (solid.Count != 0) last = solid.Max();
             int holes = 0;
             for (int i = 0; i <= last; i++) if (p.Usable[i] && !solid.Contains(i)) holes++;
-            return runs * 100000L + holes * 100L + Math.Max(last, 0) * 5L + rotation;
+            return regions * 100000000000L + groupWaste * 10000000L + inconsistent * 1000000L +
+                holes * 1000L + Math.Max(last, 0) * 5L + rotation;
         }
         private static void CheckProblem(PackingProblem p)
         {

@@ -2,8 +2,12 @@
 
 ## 当前发布
 
+0.2.3 为卢剧情箱保护、枪械整件收纳和整理算法修复版本。详细变更与离线验证范围见 `release/release-notes-v0.2.3.md`；个人存档和提取布局不上传。以下 0.2.2 记录仅作为历史发布与实机截图的来源。
+
+2026-11-12 的 0.2.3 已通过七套回归、原生扫描及本地安装校验，并更新同一工坊 ID；公开 API 确认条目公开、未封禁，内容为 151,370 字节。安装及工坊包 DLL SHA-256 为 `abaa1e869546af8d361e100415206f86ce1c694eb1983bce46f3b3aba0ee1c3d`。GitHub ZIP SHA-256 为 `9be5d0181310fce5db83ed289f07c760fb06a5397c2fce4ccf572aeb200f380a`。保留六张原截图及实机像素封面；0.2.3 游戏内复测仍待完成。
+
 - GitHub 公开源码：[Mangataaa/deep-space-qol](https://github.com/Mangataaa/deep-space-qol)
-- 0.2.2 测试版附件：[v0.2.2 Release](https://github.com/Mangataaa/deep-space-qol/releases/tag/v0.2.2)
+- 0.2.3 测试版附件：[v0.2.3 Release](https://github.com/Mangataaa/deep-space-qol/releases/tag/v0.2.3)
 - Steam 公开条目：[深空管家 / Deep Space QoL](https://steamcommunity.com/sharedfiles/filedetails/?id=3836735823)，工坊 ID `3836735823`，游戏 App ID `4348910`。
 
 2026-11-09 更新至 0.2.2。Steam 返回上传成功，匿名公开接口确认条目公开、未封禁，内容大小 141,615 字节；展示页使用六张用户实机截图，保持同一工坊 ID。GitHub Release 为 prerelease，ZIP SHA-256 为 `4149ae1adc7f4c85dfd1086bcceb0e70f4b4bc0e31ae14be1d18311d0000ce07`，与远端附件摘要一致。随后补图仅更新展示信息，保留原安装包及校验值。

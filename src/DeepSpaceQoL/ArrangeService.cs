@@ -23,7 +23,7 @@ namespace DeepSpaceQoL
         public static bool TryArrange(GameGridInventory inventory, out string status)
         {
             status = "此容器当前不能整理。";
-            if (inventory == null || inventory.inventoryShape == null || StorageCatalog.IsNativeAccessLocked(inventory) || !GeneralHelper.MayPlayerInsertInto(inventory)) return false;
+            if (inventory == null || inventory.inventoryShape == null || StorageRules.IsQuestInventory(inventory) || StorageCatalog.IsNativeAccessLocked(inventory) || !GeneralHelper.MayPlayerInsertInto(inventory)) return false;
             Snapshot[]? snapshots = null;
             bool staged = false;
             try

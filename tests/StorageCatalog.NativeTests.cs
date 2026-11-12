@@ -2,17 +2,19 @@ using System.Collections;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
+using System.Text.Json;
 using DeepSpaceQoL;
 
 // The installed game's real types/methods execute on data-only native fixtures.
 // No Unity/native constructors, scene initialization, inventory actions or patches run.
-string managed = args.Length == 1 ? Path.GetFullPath(args[0]) : @"D:\SteamLibrary\steamapps\common\Probably Stolen\Probably Stolen_Data\Managed";
+string managed = args.Length >= 1 ? Path.GetFullPath(args[0]) : @"D:\SteamLibrary\steamapps\common\Probably Stolen\Probably Stolen_Data\Managed";
 AssemblyLoadContext.Default.Resolving += (_, name) =>
 {
     string path = Path.Combine(managed, name.Name + ".dll");
     return File.Exists(path) ? AssemblyLoadContext.Default.LoadFromAssemblyPath(path) : null;
 };
 NativeStorageTests.Run();
+if (args.Length == 2) NativeStorageTests.VerifyLouSaveEvidence(args[1]);
 
 static class NativeStorageTests
 {
@@ -24,7 +26,7 @@ static class NativeStorageTests
     private static readonly string[] BagsAndBoxes = {
         "fanny_pack", "satchel", "kids_backpack", "kids_backpack_large", "backpack_small",
         "backpack_medium", "backpack_medium_military", "backpack_large", "backpack_large_military",
-        "sec_box", "evidence_box", "lou_locker", "med_box", "eng_box", "service_box", "beerCase",
+        "sec_box", "evidence_box", "med_box", "eng_box", "service_box", "beerCase",
         "lootbox_small", "lootbox_medium", "lootbox_large", "safe", "large_storage_bay",
         "pouch_general", "pouch_general_large", "firstaid_box"
     };
@@ -34,7 +36,7 @@ static class NativeStorageTests
         "nutrient_tablet_container", "save_bag", "back_inv_save_bag", "hidden_save_bag", "showcase_save_bag",
         "sold_save_bag", "storage_bay_expansion_kit", "technician_backpack", "backpack_small_modular",
         "backpack_medium_modular", "backpack_large_modular", "water_purifier", "automatic_meat_processor",
-        "unknown_mod_container"
+        "unknown_mod_container", "lou_locker"
     };
 
     private static void Check(bool condition, string message)
@@ -168,9 +170,48 @@ static class NativeStorageTests
         TestDiscoveryAndLocks();
         TestMovePredicate();
         TestStowSourcesTargetsAndPackages();
+        TestQuestProtectionAndWeapons();
         SetEntry(null);
         StorageRules.ClearCache();
         Console.WriteLine($"Storage catalog native tests passed: {checks} checks. Real Assembly-CSharp; offline data-only fixtures; no live inventory actions/Unity scene calls.");
+    }
+
+    internal static void VerifyLouSaveEvidence(string path)
+    {
+        // Input is an offline export of box records from user-selected saves, not
+        // a live game load. Match the native CollectBox counting/opened predicates.
+        using var json = JsonDocument.Parse(File.ReadAllText(path));
+        foreach (var evidence in json.RootElement.EnumerateArray())
+        {
+            var records = evidence.GetProperty("nodes").EnumerateArray().ToArray();
+            var items = new Dictionary<long, GameItem>();
+            foreach (var record in records)
+            {
+                var item = Alive(Item(record.GetProperty("identifier").GetString()!));
+                var keys = record.GetProperty("_keys").EnumerateArray().Select(k => k.GetString()!).ToArray();
+                var values = record.GetProperty("_values").EnumerateArray().ToArray();
+                for (int i = 0; i < keys.Length; i++)
+                    item.state.dict[keys[i]] = new TagState(keys[i], keys[i]) {
+                        valueEnabled = values[i].GetProperty("valueEnabled").GetBoolean(),
+                        valueInt = values[i].GetProperty("valueInt").GetInt32() };
+                item.unitCount = record.GetProperty("unitCount").GetInt32();
+                Window(item, Grid());
+                items.Add(record.GetProperty("uuid").GetInt64(), item);
+            }
+            foreach (var record in records)
+            {
+                var owner = items[record.GetProperty("uuid").GetInt64()];
+                foreach (var child in record.GetProperty("childItems").EnumerateArray())
+                    Put((GameGridInventory)owner.contentWindow.childElement, items[child.GetInt64()]);
+            }
+            var box = items.Values.Single(i => i.IsTag("LOU_TOY_BOX_TAG"));
+            var toys = GraphUtils.FindChildrenType(box, (GameItem i) => i.IsTag("LOU_TOY_TAG"), (GameItem _) => true);
+            int expected = box.GetTagReadonly("LOU_TOY_COUNT_INT").GetInt();
+            Check(toys.Count >= expected && expected > 0 && !box.IsTag("OPENED_TAG"), "Saved Lou box must satisfy the native Untouched content checks");
+            foreach (var toy in toys)
+                Check(LouToyBoxHelper.IsInsideLouBox(toy) && !StorageRules.CanAutomate(toy), "Real native ancestry and production automation protection must both hold for saved toys");
+            Console.WriteLine($"Saved Lou box verified via native graph/count/opened predicates: {evidence.GetProperty("file").GetString()}, toys={toys.Count}/{expected}, opened=False. No save file was written.");
+        }
     }
 
     private static void TestIdentities()
@@ -303,6 +344,49 @@ static class NativeStorageTests
         Check(StorageCatalog.GetSources().Contains(nestedGrid), "Clearing native/mod locks restores nested sources.");
         SetEntry(null);
         Check(StorageCatalog.GetPages().Count == 0 && StorageCatalog.GetStoragePages().Count == 0 && StorageCatalog.GetSources().Count == 0, "No store scene means no inventories.");
+    }
+
+    private static void TestQuestProtectionAndWeapons()
+    {
+        StorageRules.ClearCache();
+        var entry = Native<EmporiumEntry>(); entry.invElement = Grid(); SetEntry(entry);
+        var ordinary = Direct("evidence_box", "CONTAINER_TAG");
+        var lou = Direct("evidence_box", "CONTAINER_TAG", "LOU_TOY_BOX_TAG", "IMPORTANT_TAG");
+        var louGrid = (GameGridInventory)lou.contentWindow.childElement;
+        var toy = Alive(Item("crowbar", "TOOL", "LOU_TOY_TAG", "IMPORTANT_TAG"));
+        var nested = Direct("backpack_small", "BACKPACK_TAG");
+        var nestedGrid = (GameGridInventory)nested.contentWindow.childElement;
+        var nestedGood = Alive(Item("bottled_water", "WATER"));
+        Put(nestedGrid, nestedGood); Put(louGrid, toy, nested); Put(entry.invElement, lou, ordinary);
+        Check(StorageCatalog.IsStorage(ordinary), "An ordinary evidence box remains usable storage.");
+        Check(!StorageCatalog.IsStorage(lou), "Lou's evidence-box variant must never expose automation pages.");
+        Check(!StorageCatalog.GetSources().Contains(louGrid) && !StorageCatalog.GetSources().Contains(nestedGrid), "Discovery must prune the whole quest subtree.");
+        Check(!StorageRules.CanAutoAccess(louGrid) && !StorageRules.CanAutoAccess(nestedGrid), "Direct access must protect quest ancestors even outside discovery.");
+        Check(!StorageRules.CanAutomate(toy) && !StorageRules.CanAutomate(nestedGood), "No stock or stow access to any quest descendant.");
+        Check(!StowService.ScanSources(new[] { new StoragePage(lou, 0, louGrid) }).Candidates.Any(), "Explicitly supplied quest pages cannot bypass scanning protection.");
+        Put(entry.invElement, Alive(Item("screwdriver", "TOOL", "LOU_TOY_TAG")));
+        Check(!StowService.ScanSources(StorageCatalog.GetPages()).Candidates.Any(i => i.identifier == "screwdriver"), "A previously extracted toy stays protected outside Lou's box.");
+        foreach (string tag in new[] { "IMPORTANT_TAG", "LOU_TOY_TAG", "LOU_TOY_BOX_TAG", "LOU_LOCKER_TAG" })
+        {
+            var quest = Alive(Item("quest_good", "FOOD", tag)); Put(entry.invElement, quest);
+            Check(!StorageRules.CanAutomate(quest) && !StowService.IsMovableStock(quest), tag + " must protect loose quest goods.");
+        }
+        foreach (string id in new[] { "handmade_pistol", "heavy_handmade_pistol", "smg", "shotgun", "revolver", "glock_receiver", "printed_gun" })
+        {
+            var gun = Alive(Direct(id, "WEAPON", "FIREARM", "CONTAINER_TAG"));
+            var ammo = Alive(Item("small_pistol_ammo", "AMMUNITION"));
+            var gunGrid = (GameGridInventory)gun.contentWindow.childElement; Put(gunGrid, ammo); Put(entry.invElement, gun);
+            Check(StowService.IsMovableStock(gun), id + " is a whole movable good despite its attachment/ammo window.");
+            var scan = StowService.ScanSources(StorageCatalog.GetPages());
+            Check(scan.Candidates.Contains(gun) && !scan.Candidates.Contains(ammo), "Stow a weapon whole; never extract its ammo/attachments.");
+            Check(!StorageCatalog.IsStorage(gun), "Weapons must never expose general-purpose source/target grids.");
+            StorageRules.Policy(ammo).ContainerLocked = true;
+            Check(!StowService.IsMovableStock(gun), "A lock inside a weapon must protect its entire composite instance.");
+            StorageRules.Policy(ammo).ContainerLocked = false;
+            ammo.modifiedState.dict["IMPORTANT_TAG"] = new TagState("IMPORTANT_TAG", "IMPORTANT_TAG") { valueEnabled = true };
+            Check(!StowService.IsMovableStock(gun), "A quest object inside a composite weapon must protect its shell.");
+        }
+        SetEntry(null);
     }
 
     private static void TestMovePredicate()

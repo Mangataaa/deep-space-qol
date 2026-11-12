@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="BuyerPolicyNativeTests.cs" />
+    <Compile Include="../src/DeepSpaceQoL/StoryProtection.cs" Link="StoryProtection.cs" />
     <Compile Include="../src/DeepSpaceQoL/BuyerStockPolicy.cs" Link="BuyerStockPolicy.cs" />
     <Reference Include="Assembly-CSharp"><HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath></Reference>

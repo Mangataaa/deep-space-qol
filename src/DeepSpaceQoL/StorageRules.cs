@@ -8,6 +8,12 @@ internal static class StorageRules
     private const string PolicyTag = "DEEPSPACE_QOL_STORAGE_V1";
     private static readonly Dictionary<GameItem, (string raw, StoragePolicy policy)> Cache = new();
 
+    /// <summary>Native story protection is unconditional, independent of user-configured locks.</summary>
+    internal static bool IsQuestItem(GameItem item) => StoryProtection.IsProtected(item);
+
+    internal static bool IsQuestInventory(GameInventory inventory) => inventory != null &&
+        GraphUtils.FindParentsType<GameItem>(inventory, passthrough: _ => true).Any(StoryProtection.ProtectsContents);
+
     public static void ClearCache() => Cache.Clear();
 
     public static StoragePolicy Policy(GameItem owner)
@@ -95,19 +101,19 @@ internal static class StorageRules
 
     /// <summary>One-click access in either direction; manual placement/category rules remain separate.</summary>
     public static bool CanAutoAccess(GameInventory inventory) => inventory != null &&
-        !IsLocked(inventory) && !StorageCatalog.IsNativeAccessLocked(inventory);
+        !IsQuestInventory(inventory) && !IsLocked(inventory) && !StorageCatalog.IsNativeAccessLocked(inventory);
 
     /// <summary>Portable packages move whole only when no contained item/window has a protection lock.</summary>
     internal static bool HasProtectedContents(GameItem item) =>
-        Policy(item).IsSaleProtected() || LockHelper.IsCurrentlyLocked(item) || item.IsTag("ITEM_BEHIND_LOCK_TAG") ||
+        IsQuestItem(item) || Policy(item).IsSaleProtected() || LockHelper.IsCurrentlyLocked(item) || item.IsTag("ITEM_BEHIND_LOCK_TAG") ||
         GraphUtils.FindAllChildrenType<PixelWindow>(item).Any(w => w.isLocked) ||
         GraphUtils.FindAllChildrenType<GameInventory>(item).Any(i => i.IsInsertLocked() || i.IsRemoveLocked()) ||
-        GraphUtils.FindAllChildrenType<GameItem>(item).Any(i => Policy(i).IsSaleProtected() ||
+        GraphUtils.FindAllChildrenType<GameItem>(item).Any(i => IsQuestItem(i) || Policy(i).IsSaleProtected() ||
             LockHelper.IsCurrentlyLocked(i) || i.IsTag("ITEM_BEHIND_LOCK_TAG"));
 
     public static bool CanAutomate(GameItem item)
     {
-        if (item == null || item.parentInventory == null || item.unitCount <= 0) return false;
+        if (item == null || item.parentInventory == null || item.unitCount <= 0 || IsQuestItem(item)) return false;
         if (item is GameItemElement element && element.IsDestroyed()) return false;
         if (!GeneralHelper.IsItemOwned(item) || ItemPinHelper.IsPinned(item) || !item.MayRemove()) return false;
         if (!CanAutoAccess(item.parentInventory)) return false;

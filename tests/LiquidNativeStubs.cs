@@ -9,6 +9,7 @@ namespace DeepSpaceQoL
     }
     internal static class StorageRules
     {
+        public static bool IsQuestItem(GameItem item) => throw new NotImplementedException();
         public static bool CanAutoAccess(GameInventory inventory) => throw new NotImplementedException();
         public static Core.StoragePolicy Policy(GameItem item) => throw new NotImplementedException();
     }

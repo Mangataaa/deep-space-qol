@@ -121,6 +121,14 @@ static class NativeBuyerTests
         Check(BuyerStockPolicy.CheckCounter(security, new[] { foreign }) == BuyerStockPolicy.CounterIssue.None,
             "Customer-owned goods must not be treated as the player's offer.");
         Check(!BuyerStockPolicy.AcceptedStagedItems(ordinary, new[] { foreign }).Any(), "Non-owned goods must not enter offer totals.");
+        foreach (string tag in new[] { "IMPORTANT_TAG", "LOU_TOY_TAG", "LOU_TOY_BOX_TAG", "LOU_LOCKER_TAG" })
+        {
+            var story = Item("story_good", "FOOD", tag);
+            Check(!BuyerStockPolicy.Accepts(foodBuyer, story), "Story protection must override native buyer interest: " + tag);
+            Check(!BuyerStockPolicy.AcceptedStagedItems(foodBuyer, new[] { story }).Any(), "Story goods must not enter automatic budget totals: " + tag);
+            Check(BuyerStockPolicy.CheckCounter(foodBuyer, new[] { food, story }) == BuyerStockPolicy.CounterIssue.StoryItem,
+                "Previously staged story goods must stop further stocking with a recovery warning: " + tag);
+        }
         Console.WriteLine($"Native buyer policy: {checks} checks passed using actual StoreClient predicates; no game started.");
     }
 }

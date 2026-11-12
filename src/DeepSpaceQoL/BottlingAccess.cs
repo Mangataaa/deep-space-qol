@@ -20,7 +20,7 @@ internal static class BottlingAccess
         { reason = "物品已不存在或不是可操作的单件容器。"; return false; }
         if (!GeneralHelper.IsItemEffectivelyOwned(item))
         { reason = "只能为自有物品装瓶，不能改动顾客商品或非自有设备内的瓶子。"; return false; }
-        if (!StorageRules.CanAutoAccess(item.parentInventory) ||
+        if (StorageRules.IsQuestItem(item) || !StorageRules.CanAutoAccess(item.parentInventory) ||
             StorageRules.Policy(item).IsSaleProtected())
         { reason = "水源或瓶子位于锁定的储物页、箱子或原生封锁区域。"; return false; }
         if (GeneralHelper.IsItemLocked(item) || LockHelper.IsCurrentlyLocked(item) || item.IsTag("ITEM_BEHIND_LOCK_TAG") ||

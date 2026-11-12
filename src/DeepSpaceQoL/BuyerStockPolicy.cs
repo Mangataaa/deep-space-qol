@@ -3,7 +3,7 @@ namespace DeepSpaceQoL;
 /// <summary>Native buyer preferences plus pre-placement protection from security callbacks.</summary>
 internal static class BuyerStockPolicy
 {
-    internal enum CounterIssue { None, SecurityRisk, DuplicateVariety }
+    internal enum CounterIssue { None, SecurityRisk, DuplicateVariety, StoryItem }
 
     internal static bool IsSecurity(StoreClient client) => client.isSecurity ||
         string.Equals(client.clientFaction, StoreClient.FACTION_SECURITY, StringComparison.Ordinal) || client.IsTag("SECURITY");
@@ -16,6 +16,7 @@ internal static class BuyerStockPolicy
 
     internal static bool Accepts(StoreClient client, GameItem item)
     {
+        if (StoryProtection.ContainsProtected(item)) return false;
         // Security reacts when an item enters the counter, before any sale or later rollback.
         // Never use detection chance, heat, concealment or a buyer override to allow a stolen item.
         if (IsSecurity(client) && HasSecurityRisk(item)) return false;
@@ -28,6 +29,7 @@ internal static class BuyerStockPolicy
     internal static CounterIssue CheckCounter(StoreClient client, IEnumerable<GameItem> items)
     {
         var owned = items.Where(GeneralHelper.IsItemOwned).ToArray();
+        if (owned.Any(StoryProtection.ContainsProtected)) return CounterIssue.StoryItem;
         if (IsSecurity(client) && owned.Any(HasSecurityRisk)) return CounterIssue.SecurityRisk;
         if (client.isRequireVariety)
         {
@@ -40,6 +42,7 @@ internal static class BuyerStockPolicy
 
     internal static string Explain(CounterIssue issue) => issue switch
     {
+        CounterIssue.StoryItem => "称重区已有剧情保护物品或包含剧情物品的容器，请先手动收回。本轮未继续上货，也未把这些物品计入自动预算。",
         CounterIssue.SecurityRisk => "当前是治安部顾客，称重区已有违禁品或赃物（含容器内部）。请先手动收回这些物品，本轮未继续上货。",
         CounterIssue.DuplicateVariety => "当前顾客要求物品多样性，称重区已有同品种的多件商品。请先手动保留每种一件，再继续上货。",
         _ => ""
