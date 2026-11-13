@@ -12,7 +12,11 @@ internal static class StorageRules
     internal static bool IsQuestItem(GameItem item) => StoryProtection.IsProtected(item);
 
     internal static bool IsQuestInventory(GameInventory inventory) => inventory != null &&
-        GraphUtils.FindParentsType<GameItem>(inventory, passthrough: _ => true).Any(StoryProtection.ProtectsContents);
+        GraphUtils.FindParentsType<GameItem>(inventory, passthrough: _ => true).Any(owner =>
+            StoryProtection.ProtectsContents(owner) &&
+            // IMPORTANT protects an ordinary native container's shell, not its stock.
+            // IsStorage verifies the audited ID/structure and always rejects Lou's property.
+            !(GeneralHelper.IsItemOwned(owner) && StorageCatalog.IsStorage(owner)));
 
     public static void ClearCache() => Cache.Clear();
 

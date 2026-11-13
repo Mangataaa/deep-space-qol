@@ -1,5 +1,7 @@
 # Genuine storage discovery and automatic stowing
 
+**0.3.1 correction:** ordinary native containers also carry `IMPORTANT_TAG`; their audited pages are accessible independently of shell pinning, while the shell remains protected. See `pinned-storage-evidence.md` for the corrected predicates and 1168-check regression. Explicit Lou identities remain excluded; the historical allowlist below predates that story-protection correction.
+
 Verified against the installed game on 2026-11-09. This change fixes automatic storage discovery treating machinery expansion bays as ordinary storage, narrows automatic stowing to loose stock, and preserves both native and mod locks.
 
 ## Local evidence

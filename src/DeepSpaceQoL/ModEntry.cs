@@ -20,7 +20,7 @@ public sealed class ModEntry : IMod
         panelKey = config.DefineEnum("panel_key", KeyCode.F6, "操作", () => "控制面板快捷键");
         stockKey = config.DefineEnum("stock_key", KeyCode.None, "操作", () => "一键上货快捷键（默认未绑定）");
         stowKey = config.DefineEnum("stow_key", KeyCode.None, "操作", () => "一键收纳快捷键（默认未绑定）");
-        Log.Log("深空管家 0.3.0：鉴定填价、搜查风险高亮、改造体名称提示、荧光莓品质角标。保留剧情物品保护与原生快捷操作。");
+        Log.Log("深空管家 0.3.1：修复普通重要储物容器内容被误排除；固定柜体不影响未锁定内容上货。保留卢剧情保护、鉴定及品质提示。");
     }
 
     public void OnEnable()

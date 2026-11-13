@@ -146,7 +146,7 @@ static class NativeStorageTests
 
     private static GameItem Tabbed(string id, params GameGridInventory[] grids)
     {
-        var owner = Item(id, "STORAGE", "CONTAINER_TAG", "SYSTEM_TAG");
+        var owner = Item(id, "STORAGE", "CONTAINER_TAG", "SYSTEM_TAG", "IMPORTANT_TAG");
         var row = Row(Panel("storage", Tabs(grids.Select(g => (PixelElement)Intake(g)).ToArray())));
         Window(owner, row);
         // Native machinery relinking attaches page storage to the row, not the visual wrappers.
@@ -171,6 +171,7 @@ static class NativeStorageTests
         TestMovePredicate();
         TestStowSourcesTargetsAndPackages();
         TestQuestProtectionAndWeapons();
+        TestPinnedStorageContents();
         SetEntry(null);
         StorageRules.ClearCache();
         Console.WriteLine($"Storage catalog native tests passed: {checks} checks. Real Assembly-CSharp; offline data-only fixtures; no live inventory actions/Unity scene calls.");
@@ -218,7 +219,7 @@ static class NativeStorageTests
     {
         foreach (string id in Cabinets.Concat(BagsAndBoxes))
         {
-            var owner = Direct(id, "STORAGE", "CONTAINER_TAG");
+            var owner = Direct(id, "STORAGE", "CONTAINER_TAG", "IMPORTANT_TAG");
             Check(StorageCatalog.IsStorage(owner), id + " should expose its direct native storage grid.");
             var pages = StorageCatalog.PagesOf(owner);
             Check(pages.Count == 1 && pages[0].Index == 0 && pages[0].Owner == owner, id + " page identity/index must be stable.");
@@ -389,6 +390,74 @@ static class NativeStorageTests
         SetEntry(null);
     }
 
+    private static void TestPinnedStorageContents()
+    {
+        foreach (bool pinned in new[] { false, true })
+        foreach (string id in Cabinets.Concat(BagsAndBoxes))
+        {
+            StorageRules.ClearCache();
+            var entry = Native<EmporiumEntry>(); entry.invElement = Grid(); SetEntry(entry);
+            var owner = Alive(Direct(id, "CONTAINER_TAG", "IMPORTANT_TAG"));
+            if (pinned) owner.modifiedState.dict["PINNED_TAG"] = new TagState("PINNED_TAG", "PINNED_TAG") { valueEnabled = true };
+            var inventory = (GameGridInventory)owner.contentWindow.childElement;
+            var good = Alive(Item("bottled_water", "WATER"));
+            var fixedGood = Alive(Item("fixed_water", "WATER", "PINNED_TAG"));
+            var questGood = Alive(Item("quest_water", "WATER", "IMPORTANT_TAG"));
+            Put(entry.invElement, owner); Put(inventory, good, fixedGood, questGood);
+            Check(StorageRules.IsQuestItem(owner) && !StorageRules.CanAutomate(owner), "Important storage shell must never become a sale candidate: " + id);
+            Check(StorageCatalog.GetSources().Contains(inventory), "Native important storage contents remain a source regardless of owner pin: " + id);
+            Check(StorageRules.CanAutomate(good) && good.MaxNumRemove() == good.unitCount, "Actual native removal and automation permit ordinary goods inside the pinned/unpinned shell: " + id);
+            Check(!StorageRules.CanAutomate(fixedGood) && !StorageRules.CanAutomate(questGood), "Pinning/protection on the goods themselves still wins: " + id);
+            Check(StowService.ScanSources(StorageCatalog.GetPages()).Candidates.Contains(good), "Shared stock/stow access must include the interior good: " + id);
+            StorageRules.Policy(owner).Page(0).SaleLocked = true;
+            Check(!StorageCatalog.GetSources().Contains(inventory) && !StorageRules.CanAutomate(good), "A page lock still protects the fixed container's contents: " + id);
+            StorageRules.Policy(owner).Page(0).SaleLocked = false;
+            StorageRules.Policy(owner).ContainerLocked = true;
+            Check(!StorageCatalog.GetSources().Contains(inventory) && !StorageRules.CanAutomate(good), "Whole-container mod lock still wins: " + id);
+            StorageRules.Policy(owner).ContainerLocked = false;
+            owner.contentWindow.isLocked = true;
+            Check(!StorageRules.CanAutomate(good), "Native window lock still wins: " + id);
+            owner.contentWindow.isLocked = false;
+            foreach (string tag in new[] { "LOU_TOY_TAG", "LOU_TOY_BOX_TAG", "LOU_LOCKER_TAG" })
+            {
+                owner.modifiedState.dict[tag] = new TagState(tag, tag) { valueEnabled = true };
+                Check(!StorageCatalog.IsStorage(owner) && !StorageRules.CanAutomate(good), "Explicit Lou tags override recognized storage IDs and pin state: " + id + "/" + tag);
+                owner.modifiedState.dict.Remove(tag);
+            }
+            Check(StorageRules.CanAutomate(good) && ItemPinHelper.IsPinned(owner) == pinned, "Checks do not change the shell's pin state: " + id);
+        }
+        var unknown = Alive(Direct("unknown_quest_box", "CONTAINER_TAG", "IMPORTANT_TAG", "PINNED_TAG"));
+        var unknownGrid = (GameGridInventory)unknown.contentWindow.childElement;
+        var unknownGood = Alive(Item("unknown_box_water", "WATER")); Put(unknownGrid, unknownGood);
+        Check(!StorageCatalog.IsStorage(unknown) && !StorageRules.CanAutomate(unknownGood), "An unknown important container must remain protected.");
+        var unowned = Alive(Direct("storage_bay", "CONTAINER_TAG", "IMPORTANT_TAG", "PINNED_TAG"));
+        unowned.modifiedState.dict.Remove("IS_OWNED_TAG");
+        var unownedGrid = (GameGridInventory)unowned.contentWindow.childElement;
+        var unownedGood = Alive(Item("unowned_box_water", "WATER")); Put(unownedGrid, unownedGood);
+        Check(StorageRules.IsQuestInventory(unownedGrid) && !StorageRules.CanAutomate(unownedGood), "Recognized storage identity cannot grant access inside an unowned important container.");
+        foreach (bool pinned in new[] { false, true })
+        {
+            var entry = Native<EmporiumEntry>(); entry.invElement = Grid(); SetEntry(entry);
+            var grids = new[] { Grid(), Grid(), Grid() };
+            var cabinet = Tabbed("storage_bay_large", grids);
+            if (pinned) cabinet.modifiedState.dict["PINNED_TAG"] = new TagState("PINNED_TAG", "PINNED_TAG") { valueEnabled = true };
+            Put(entry.invElement, cabinet);
+            var nested = Alive(Direct("backpack_small", "CONTAINER_TAG", "IMPORTANT_TAG", "PINNED_TAG"));
+            var nestedGrid = (GameGridInventory)nested.contentWindow.childElement;
+            var good = Alive(Item("nested_water", "WATER")); Put(nestedGrid, good); Put(grids[0], nested);
+            Check(grids.All(g => StorageCatalog.GetSources().Contains(g)) && StorageCatalog.GetSources().Contains(nestedGrid), "All three real-shaped IMPORTANT cabinet tabs and an IMPORTANT pinned nested bag remain discoverable.");
+            Check(StorageRules.CanAutomate(good), "Nested goods remain eligible under independently fixed cabinet and backpack shells.");
+            StorageRules.Policy(cabinet).Page(1).SaleLocked = true;
+            Check(!StorageCatalog.GetSources().Contains(grids[1]) && StorageRules.CanAutomate(good), "A locked sibling page does not block other pinned cabinet tabs.");
+            StorageRules.Policy(cabinet).Page(0).SaleLocked = true;
+            Check(!StorageRules.CanAutomate(good), "A locked outer page protects a fixed nested bag.");
+            StorageRules.Policy(cabinet).Page(0).SaleLocked = false;
+            Check(StorageRules.CanAutomate(good) && ItemPinHelper.IsPinned(cabinet) == pinned && ItemPinHelper.IsPinned(nested), "Unlocking restores goods without unpinning either container.");
+        }
+        SetEntry(null);
+        StorageRules.ClearCache();
+    }
+
     private static void TestMovePredicate()
     {
         foreach (string id in Cabinets.Concat(BagsAndBoxes).Concat(Functional))
@@ -451,7 +520,7 @@ static class NativeStorageTests
         var scan = StowService.ScanSources(pages);
         Check(scan.Candidates.Contains(bottle) && scan.Candidates.Contains(testKit) && scan.Candidates.Contains(tablets), "Real stow source pipeline must include ordinary water and both screenshot packages.");
         Check(!scan.Candidates.Contains(strip), "Keep a filled test-kit package intact; do not extract its internal strips.");
-        Check(scan.Pinned == 1 && scan.Unowned == 1 && scan.Restricted == 1 && scan.Equipment == 1, "Source diagnostics must report native pinned/unowned/removal restrictions and cabinet shells.");
+        Check(scan.Pinned == 1 && scan.Unowned == 1 && scan.Restricted == 1 && scan.Quest == 1 && scan.Equipment == 0, "Source diagnostics must retain native restrictions and classify the real IMPORTANT cabinet shell as protected.");
         Check(scan.Summary.Contains("固定 1") && scan.Summary.Contains("非自有 1") && scan.Summary.Contains("原生不可移 1"), "Zero-action reports must retain specific source skip reasons.");
         var offered = Alive(Item("bottled_water", "WATER", "LIQUID_CONTAINER_TAG"));
         Put(entry.backInvinvElement, offered);

@@ -3,7 +3,7 @@
   <ID>deep_space_qol</ID>
   <Name>深空管家 / Deep Space QoL</Name>
   <Author>Deep Space QoL contributors</Author>
-  <ModVersion>0.3.0</ModVersion>
+  <ModVersion>0.3.1</ModVersion>
   <Description>原生鉴定填价、搜查违禁品及赃物高亮、改造体名称提示、荧光莓品质角标。保留剧情物品保护、分类储物、一键上货整理与右键装瓶。</Description>
   <GameVersions><Version>0.46</Version></GameVersions>
   <Prerequisites />

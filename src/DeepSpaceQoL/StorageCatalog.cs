@@ -83,7 +83,9 @@ internal static class StorageCatalog
     public static bool IsStorage(GameItem item) => PagesOf(item).Count != 0;
 
     private static bool HasStorageIdentity(GameItem owner) => owner != null &&
-        !StorageRules.IsQuestItem(owner) &&
+        // Native container initializers also mark ordinary cabinets/backpacks IMPORTANT.
+        // Keep the shell protected, but only explicit Lou identity prunes its contents here.
+        !StoryProtection.IsLouProperty(owner) &&
         owner.identifier != null && StorageIdentifiers.Contains(owner.identifier) &&
         !(owner is GameCharacterItem) && !owner.IsGameItemType("MACHINE");
 
