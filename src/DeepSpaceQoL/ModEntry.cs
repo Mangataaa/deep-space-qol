@@ -20,7 +20,7 @@ public sealed class ModEntry : IMod
         panelKey = config.DefineEnum("panel_key", KeyCode.F6, "操作", () => "控制面板快捷键");
         stockKey = config.DefineEnum("stock_key", KeyCode.None, "操作", () => "一键上货快捷键（默认未绑定）");
         stowKey = config.DefineEnum("stow_key", KeyCode.None, "操作", () => "一键收纳快捷键（默认未绑定）");
-        Log.Log("深空管家 0.2.3：卢的剧情箱和重要物品自动保护；枪械整件收纳；同类成块整理。F6 为高级面板。");
+        Log.Log("深空管家 0.3.0：鉴定填价、搜查风险高亮、改造体名称提示、荧光莓品质角标。保留剧情物品保护与原生快捷操作。");
     }
 
     public void OnEnable()
@@ -38,6 +38,8 @@ public sealed class ModEntry : IMod
         {
             if (!Enabled) return;
             NativeInventoryButtons.Init();
+            NativeSecurityHighlights.Init();
+            NativeBerryQuality.Init();
             ModHelper.StartCoroutine(Id, InputLoop());
         });
     }
@@ -57,6 +59,10 @@ public sealed class ModEntry : IMod
         NativeInventoryButtons.Dispose();
         NativeBottlingMenu.Dispose();
         NativeFeedback.Dispose();
+        NativeAppraisal.Dispose();
+        NativeSecurityHighlights.Dispose();
+        NativeBerryQuality.Dispose();
+        NativeAugCustomer.Dispose();
         ControlPanel.Close();
         foreach (var owner in StorageCatalog.GetPages().Select(p => p.Owner).Where(p => p != null).Distinct())
             StorageExpansionHelper.InitTabNames(owner!);
@@ -70,12 +76,18 @@ public sealed class ModEntry : IMod
         NativeInventoryButtons.Dispose();
         NativeBottlingMenu.Dispose();
         NativeFeedback.Dispose();
+        NativeAppraisal.Dispose();
+        NativeSecurityHighlights.Dispose();
+        NativeBerryQuality.Dispose();
+        NativeAugCustomer.Dispose();
         NativeBottlingMenu.Init();
         ControlPanel.Close();
         StorageRules.ClearCache();
         foreach (var owner in StorageCatalog.GetPages().Select(p => p.Owner).Where(p => p != null).Distinct())
             StorageRules.RefreshCaptions(owner!);
         NativeInventoryButtons.Init();
+        NativeSecurityHighlights.Init();
+        NativeBerryQuality.Init();
     }
 
     private static IEnumerator InputLoop()
@@ -92,6 +104,10 @@ public sealed class ModEntry : IMod
                     NativeInventoryButtons.Refresh();
                     NativeStorageLabels.Refresh();
                     NativeFeedback.Refresh();
+                    NativeAppraisal.Refresh();
+                    NativeSecurityHighlights.Refresh();
+                    NativeBerryQuality.Refresh();
+                    NativeAugCustomer.Refresh();
                 }
                 catch (Exception ex) { Log?.Warning("原生界面刷新失败：" + ex.Message); }
             }

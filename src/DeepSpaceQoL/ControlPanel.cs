@@ -30,7 +30,7 @@ internal static class ControlPanel
         if (selectedIndex < 0) selectedIndex = pages.Count > 1 ? 1 : 0;
         selected = pages[selectedIndex].Inventory;
         var page = pages[selectedIndex];
-        var b = CustomUIManager.Instance.CreateWindow(WindowId, "深空管家 · 高级设置 · 0.2.3", CustomUIManager.LAYER_OVERLAY,
+        var b = CustomUIManager.Instance.CreateWindow(WindowId, "深空管家 · 高级设置 · 0.3.0", CustomUIManager.LAYER_OVERLAY,
             style: CustomUIManager.Style.Machinery);
         if (b == null) return;
         window = b.Handle;

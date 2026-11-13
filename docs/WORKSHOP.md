@@ -2,6 +2,17 @@
 
 ## 当前发布
 
+0.3.0 增加原生鉴定填价按钮、搜查风险高亮、改造体姓名提示与荧光莓品质提示。详细变更见 `release/release-notes-v0.3.0.md`，验证边界见 `docs/runtime-validation-v0.3.0.md`。
+
+2026-11-13 的 0.3.0 通过十一套离线测试、原生模组扫描和独立存档副本上的定向 UI 实测；包括最终构建的搜查边框与“!”显示。测试使用受控原生来客和物品，不代表自然剧情、完整周目或所有模组组合已经验证。原始 26 个存档／设置文件逐项哈希核对一致，测试槽位与探针已移出，Steam 云同步恢复开启。
+
+安装及工坊包 DLL SHA-256 为 `4b61ae542b63b72675c0900a2e73fabfe358c3d447ab61115125898337dd1026`。GitHub ZIP SHA-256 为 `4fc6aa0bc509c7a0eb151945f4bdd9043a08c2266785e79a7959f9de89f409c7`。版本附件使用 prerelease，沿用工坊 ID `3836735823`、六张历史实机展示图与原像素拼版封面；不发布测试探针、个人存档和私人截图。
+
+- GitHub 0.3.0 测试版：[v0.3.0 Release](https://github.com/Mangataaa/deep-space-qol/releases/tag/v0.3.0)
+- 工坊条目：[深空管家 / Deep Space QoL](https://steamcommunity.com/sharedfiles/filedetails/?id=3836735823)
+
+## 历史发布
+
 0.2.3 为卢剧情箱保护、枪械整件收纳和整理算法修复版本。详细变更与离线验证范围见 `release/release-notes-v0.2.3.md`；个人存档和提取布局不上传。以下 0.2.2 记录仅作为历史发布与实机截图的来源。
 
 2026-11-12 的 0.2.3 已通过七套回归、原生扫描及本地安装校验，并更新同一工坊 ID；公开 API 确认条目公开、未封禁，内容为 151,370 字节。安装及工坊包 DLL SHA-256 为 `abaa1e869546af8d361e100415206f86ce1c694eb1983bce46f3b3aba0ee1c3d`。GitHub ZIP SHA-256 为 `9be5d0181310fce5db83ed289f07c760fb06a5397c2fce4ccf572aeb200f380a`。保留六张原截图及实机像素封面；0.2.3 游戏内复测仍待完成。

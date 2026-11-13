@@ -1,5 +1,8 @@
 [CmdletBinding()]
-param([string]$GameDir = 'D:\SteamLibrary\steamapps\common\Probably Stolen')
+param(
+    [string]$GameDir = 'D:\SteamLibrary\steamapps\common\Probably Stolen',
+    [switch]$TargetedUiValidated
+)
 . (Join-Path $PSScriptRoot 'Common.ps1')
 $game = Get-GameDirectory $GameDir
 & (Join-Path $PSScriptRoot 'Build.ps1') -GameDir $game
@@ -20,8 +23,10 @@ $info = [ordered]@{
     builtAt = (Get-Date).ToString('o')
     targetFramework = 'netstandard2.1'
     gameAssemblySha256 = (Get-FileHash -LiteralPath (Join-Path $game 'Probably Stolen_Data\Managed\Assembly-CSharp.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
-    tests = @('StoragePolicy', 'GridPacking', 'StockPlanner', 'LiquidPolicy', 'BuyerPolicy.NativeTests', 'StorageCatalog.NativeTests', 'BottlingAccess.NativeTests')
-    inGameTested = $false
+    tests = @('StoragePolicy', 'GridPacking', 'StockPlanner', 'LiquidPolicy', 'BuyerPolicy.NativeTests', 'StorageCatalog.NativeTests', 'BottlingAccess.NativeTests', 'Appraisal.NativeTests', 'BerryQuality.NativeTests', 'SecurityHighlights.NativeTests', 'CustomerHints.NativeTests')
+    inGameTested = $TargetedUiValidated.IsPresent
+    inGameTestScope = if ($TargetedUiValidated) { 'Targeted UI on an isolated save copy; controlled customers/items. See docs/runtime-validation-v0.3.0.md in source.' } else { 'Not asserted by this package invocation.' }
+    fullPlaythroughTested = $false
 }
 $info | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output 'BUILD-INFO.json') -Encoding utf8
 Invoke-DotNet -Arguments @('run', '--project', (Join-Path $script:RepositoryRoot 'tools\NativeAudit\NativeAudit.csproj'), '-c', 'Release', "--property:GameDir=$game", '--', (Join-Path $game 'Probably Stolen_Data\Managed'), $output)

@@ -3,8 +3,8 @@
   <ID>deep_space_qol</ID>
   <Name>深空管家 / Deep Space QoL</Name>
   <Author>Deep Space QoL contributors</Author>
-  <ModVersion>0.2.3</ModVersion>
-  <Description>卢的剧情箱及重要物品自动保护、枪械整件收纳、同类成块整理。保留原生标签、上货箭头与水源右键装瓶。F6 为高级设置。</Description>
+  <ModVersion>0.3.0</ModVersion>
+  <Description>原生鉴定填价、搜查违禁品及赃物高亮、改造体名称提示、荧光莓品质角标。保留剧情物品保护、分类储物、一键上货整理与右键装瓶。</Description>
   <GameVersions><Version>0.46</Version></GameVersions>
   <Prerequisites />
   <Assemblies><Assembly>DeepSpaceQoL.dll</Assembly></Assemblies>
