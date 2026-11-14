@@ -3,7 +3,7 @@ using DeepSpaceQoL.Core;
 
 namespace DeepSpaceQoL;
 
-internal static class StowService
+internal static partial class StowService
 {
     private static readonly HashSet<string> PortablePackageIdentifiers = new(StringComparer.Ordinal)
     { "water_test_container", "water_tablet_container", "nutrient_tablet_container", "nutrifruit_seed_packet" };

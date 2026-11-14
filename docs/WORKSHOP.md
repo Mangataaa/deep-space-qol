@@ -2,6 +2,16 @@
 
 ## 当前发布
 
+0.5.0 汇总悬挂陈列、暗灯桌面、分帧收纳、真伪鉴定、箱内品质／风险提示，并新增每日普通顾客逐项概率选项与一键改装。通过 17 套离线回归和原生模组扫描，用户复测反馈及五张实机截图范围见 `runtime-validation-v0.5.0.md`，发布说明见 `../release/release-notes-v0.5.0.md`。
+
+发布 DLL 与用户复测的本地 0.5.0 一致，SHA-256：`67fba552fa700e74e47a43dec743ff586b9a3401a5f5f96bc3298f7300d6199f`。六文件成品 ZIP SHA-256：`236dec6a64cdf507d6ffbb2dd13ed857d833cc0f64c541f3112e7a210df40b41`。GitHub 使用 [v0.5.0 公开测试版](https://github.com/Mangataaa/deep-space-qol/releases/tag/v0.5.0)，工坊沿用条目 `3836735823` 及原游戏像素封面。
+
+新增五张图位于 `release/media/gallery-v0.5.0/`，保留原来的六张展示图。上传时显式传这个版本目录，仅追加本轮五图，按远端文件名去重，不替换旧图。截图处理保留全画面并在图外添加标题／版本；不生成虚构游戏画面。版本构建信息以 `-UserRuntimeValidated` 明确记录用户反馈来源，不声称开发代理完成整周目或完整存档验收。
+
+发布包不重新安装到正在使用的本地游戏；上传操作不修改存档或读取凭据文件。个人存档、原始审计记录、游戏依赖、临时工具和发布状态不上传。
+
+## 0.3.1 发布记录
+
 0.3.1 修复普通重要储物容器的内部商品被漏掉，与柜体是否固定无关；保留容器本体、锁、商品自身固定和卢剧情保护。详见 `release/release-notes-v0.3.1.md` 与 `docs/pinned-storage-evidence.md`。十一套离线回归通过，其中储物目录／收纳为 1168 项；原生扫描通过，0.3.1 尚无新的游戏内操作复测。
 
 DLL SHA-256 为 `e40f779c6c7326650df91ac748b20bb95754b6eb6da5ba10eca71530ba014fc3`，GitHub ZIP SHA-256 为 `ea42ed4b2f6003b4ec4976325db76cfda31505daa559eaa43538fa1fbb62bc00`。GitHub 使用 [v0.3.1 测试版](https://github.com/Mangataaa/deep-space-qol/releases/tag/v0.3.1)，工坊沿用同一条目、封面和六张历史展示图。个人存档、审计记录、游戏依赖及临时工具不上传。
@@ -75,6 +85,8 @@ dotnet run --project tools/WorkshopPublisher -c Release -- --status --game-dir '
 Steam 把各语言版本说明分开保存；工具在内容上传后用独立、仅改文字的更新，把同一份说明同步到默认英语回退，避免匿名 API 或英语界面仍显示旧版本号。这里同步的是中文原文，没有声称提供英文翻译。默认语言同步失败会保留待完成状态，不能报告整项完成。
 
 Steam 若要求接受工坊协议，工具只返回条目地址和待处理状态，由账号本人在 Steam 官方页面确认，随后重跑同一命令继续上传。
+
+0.5.0 的发布调用附加 `-GalleryPath 'release/media/gallery-v0.5.0 的完整路径'`。上传器单批最多接收 10 张本地图片，超过会明确停止而不静默截断；既有远端图片继续保留，因此新增批次使用独立目录。`scripts/New-WorkshopGallery.ps1` 的 `-HangingImage`、`-GunModdingImage`、`-AuthenticityImage`、`-AppraisalImage`、`-BerryStorageImage` 作为一组接受本轮五张原图，用 `-OutputDirectory` 指向该版本目录。
 
 ## 发布核对
 

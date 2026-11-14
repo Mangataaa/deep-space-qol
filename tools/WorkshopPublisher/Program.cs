@@ -268,8 +268,15 @@ internal static class Program
     private static void Require(bool result, string field) { if (!result) throw new InvalidOperationException($"Steam rejected Workshop {field}; nothing submitted."); }
     private static string Hash(string path) { using var file = File.OpenRead(path); return Convert.ToHexStringLower(SHA256.HashData(file)); }
     private static string ItemUrl(State state) => $"https://steamcommunity.com/sharedfiles/filedetails/?id={state.ItemId}";
-    private static string[] GalleryImages(string folder) => folder.Length == 0 || !Directory.Exists(folder) ? [] : Directory.GetFiles(folder)
-        .Where(path => Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png").Order(StringComparer.Ordinal).Take(10).ToArray();
+    private static string[] GalleryImages(string folder)
+    {
+        if (folder.Length == 0 || !Directory.Exists(folder)) return [];
+        var files = Directory.GetFiles(folder)
+            .Where(path => Path.GetExtension(path).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png").Order(StringComparer.Ordinal).ToArray();
+        if (files.Length > 10)
+            throw new InvalidOperationException("This publisher accepts at most 10 images per update batch. Pass a version-specific gallery folder; existing remote images are preserved. No images were silently omitted.");
+        return files;
+    }
 
     private static string ValidateImage(string path)
     {

@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="SecurityHighlights.NativeTests.cs" />
+    <Compile Include="../src/DeepSpaceQoL/VisibleItemViews.cs" Link="VisibleItemViews.cs" />
     <Compile Include="../src/DeepSpaceQoL/NativeSecurityHighlights.cs" Link="NativeSecurityHighlights.cs" />
     <Reference Include="Assembly-CSharp"><HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath></Reference>
     <Reference Include="UnityEngine"><HintPath>$(ManagedDir)\UnityEngine.dll</HintPath></Reference>

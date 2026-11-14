@@ -6,6 +6,11 @@ param(
     [string]$AfterImage,
     [string]$BottlingBeforeImage,
     [string]$BottlingAfterImage,
+    [string]$HangingImage,
+    [string]$GunModdingImage,
+    [string]$AuthenticityImage,
+    [string]$AppraisalImage,
+    [string]$BerryStorageImage,
     [string]$OutputDirectory = (Join-Path (Split-Path -Parent $PSScriptRoot) 'release\media\gallery')
 )
 Set-StrictMode -Version Latest
@@ -29,7 +34,19 @@ if ($BottlingBeforeImage -or $BottlingAfterImage) {
         @{ Path = $BottlingAfterImage; Name = '06-after-bottling.jpg'; Title = '交易台与打印机成品瓶：装瓶后（4 瓶）'; Version = '0.2.2' }
     )
 }
-if ($images.Count -eq 0) { throw 'Provide a gallery image set or a bottling image pair.' }
+if ($HangingImage -or $GunModdingImage -or $AuthenticityImage -or $AppraisalImage -or $BerryStorageImage) {
+    if (-not ($HangingImage -and $GunModdingImage -and $AuthenticityImage -and $AppraisalImage -and $BerryStorageImage)) {
+        throw 'Provide all five 0.5.0 feature screenshots together.'
+    }
+    $images += @(
+        @{ Path = $HangingImage; Name = '07-hanging-daily-visitors-v0.5.0.jpg'; Title = '悬挂管理与每日预期顾客开关'; Version = '0.5.0' },
+        @{ Path = $GunModdingImage; Name = '08-gun-modding-v0.5.0.jpg'; Title = '仓库配件一键改装，完成后手动交付'; Version = '0.5.0' },
+        @{ Path = $AuthenticityImage; Name = '09-authenticity-v0.5.0.jpg'; Title = '放大检查页：真伪鉴定入口'; Version = '0.5.0' },
+        @{ Path = $AppraisalImage; Name = '10-appraisal-v0.5.0.jpg'; Title = '鉴定价格一键填入，提交由你确认'; Version = '0.5.0' },
+        @{ Path = $BerryStorageImage; Name = '11-berry-storage-v0.5.0.jpg'; Title = '打开储物箱，也能直接区分莓果品质'; Version = '0.5.0' }
+    )
+}
+if ($images.Count -eq 0) { throw 'Provide a gallery image set, bottling image pair or 0.5.0 feature screenshots.' }
 $encoder = [Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object MimeType -EQ 'image/jpeg'
 foreach ($entry in $images) {
     $source = [Drawing.Image]::FromFile((Resolve-Path -LiteralPath $entry.Path).Path)

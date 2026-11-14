@@ -1,0 +1,22 @@
+<Project>
+  <PropertyGroup><BaseIntermediateOutputPath>obj/StowIncremental.NativeTests/</BaseIntermediateOutputPath><MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath></PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
+    <GameDir Condition="'$(GameDir)' == ''">D:\SteamLibrary\steamapps\common\Probably Stolen</GameDir><ManagedDir>$(GameDir)\Probably Stolen_Data\Managed</ManagedDir></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="StowIncremental.NativeTests.cs" />
+    <Compile Include="../src/DeepSpaceQoL/StowService.cs" Link="StowService.cs" />
+    <Compile Include="../src/DeepSpaceQoL/StowService.Incremental.cs" Link="StowService.Incremental.cs" />
+    <Compile Include="../src/DeepSpaceQoL/StorageCatalog.cs" Link="StorageCatalog.cs" />
+    <Compile Include="../src/DeepSpaceQoL/StorageRules.cs" Link="StorageRules.cs" />
+    <Compile Include="../src/DeepSpaceQoL/StoryProtection.cs" Link="StoryProtection.cs" />
+    <Compile Include="../src/DeepSpaceQoL/Core/StoragePolicy.cs" Link="StoragePolicy.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp"><HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(ManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(ManagedDir)\Newtonsoft.Json.dll</HintPath></Reference>
+  </ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

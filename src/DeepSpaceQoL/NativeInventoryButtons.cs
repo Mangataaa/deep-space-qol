@@ -197,7 +197,7 @@ internal static class NativeInventoryButtons
             Add(new MachineryButton("整理", () => Run(SortCurrent), 32, 16)
                 .SetDescription("整理当前打开的这一页：同种物品相邻，紧凑摆放。不会整理其他页。"));
             if (owner == null)
-                Add(new MachineryButton("收纳", () => Run(() => StowService.Run()), 32, 16)
+                Add(new MachineryButton("收纳", () => Run(() => StowService.Start()), 32, 16)
                     .SetDescription("一键收纳整理：按分类标签归入储物柜或箱子，缺少标签时使用可用的储物空间。"));
             else
             {

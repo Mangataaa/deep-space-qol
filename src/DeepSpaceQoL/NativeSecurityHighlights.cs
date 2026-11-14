@@ -25,21 +25,13 @@ internal static class NativeSecurityHighlights
             ClearOverlays();
             return;
         }
-        var root = RenderHandler.current?.windowRoot;
-        if (root == null) { ClearOverlays(); return; }
-
-        // Active render nodes cover the shop, open bags and open cabinet pages without
-        // opening any container, calling a search action or making invisible pages visible.
         var visible = new HashSet<GameItemElement>();
-        foreach (var node in root.GetComponentsInChildren<TreeNodeRender>(false))
+        foreach (var item in VisibleItemViews.Items())
         {
-            if (node.element is not GameItemElement item || !ReferenceEquals(item.handler, node) ||
-                item.isDebugMenu || item.unitCount <= 0 || item.middle == null ||
-                item.background == null || !item.background.image.enabled) continue;
             var risk = SecurityHighlightPolicy.Evaluate(item);
             if (risk.All == SecurityHighlightPolicy.RiskKind.None) continue;
             visible.Add(item);
-            if (!Overlays.TryGetValue(item, out var overlay) || !overlay.IsAlive)
+            if (!Overlays.TryGetValue(item, out var overlay) || !overlay.Matches(item))
             {
                 overlay?.Destroy();
                 overlay = new RiskOverlay(item);
@@ -92,11 +84,14 @@ internal static class NativeSecurityHighlights
         private readonly RectTransform badge;
         private readonly Image badgeImage;
         private readonly TreeNodeRender marker;
+        private readonly TreeNodeRender host;
 
-        internal bool IsAlive => root != null && marker != null;
+        internal bool Matches(GameItemElement item) => root != null && marker != null && host != null &&
+            ReferenceEquals(item.middle, host) && root.parent == host.transform;
 
         internal RiskOverlay(GameItemElement item)
         {
+            host = item.middle;
             root = NewRect("DeepSpaceQoL inspection risk", item.middle.rectTransform);
             root.anchorMin = Vector2.zero;
             root.anchorMax = Vector2.one;

@@ -1,13 +1,19 @@
 [CmdletBinding()]
 param(
     [string]$GameDir = 'D:\SteamLibrary\steamapps\common\Probably Stolen',
-    [switch]$TargetedUiValidated
+    [switch]$TargetedUiValidated,
+    [switch]$UserRuntimeValidated
 )
 . (Join-Path $PSScriptRoot 'Common.ps1')
 $game = Get-GameDirectory $GameDir
 & (Join-Path $PSScriptRoot 'Build.ps1') -GameDir $game
 [xml]$manifest = Get-Content -LiteralPath (Join-Path $script:RepositoryRoot 'src\DeepSpaceQoL\manifest.xml') -Raw
 $version = [string]$manifest.Manifest.ModVersion
+$validationDoc = "docs/runtime-validation-v$version.md"
+if ($TargetedUiValidated -and $UserRuntimeValidated) { throw 'Choose one runtime validation source.' }
+if (($TargetedUiValidated -or $UserRuntimeValidated) -and -not (Test-Path -LiteralPath (Join-Path $script:RepositoryRoot $validationDoc) -PathType Leaf)) {
+    throw "Provide the version-specific runtime validation record before asserting in-game tests: $validationDoc"
+}
 $stamp = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
 $output = Join-Path $script:RepositoryRoot "artifacts\$version\$stamp\deep_space_qol"
 $null = New-Item -ItemType Directory -Path $output
@@ -23,9 +29,11 @@ $info = [ordered]@{
     builtAt = (Get-Date).ToString('o')
     targetFramework = 'netstandard2.1'
     gameAssemblySha256 = (Get-FileHash -LiteralPath (Join-Path $game 'Probably Stolen_Data\Managed\Assembly-CSharp.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
-    tests = @('StoragePolicy', 'GridPacking', 'StockPlanner', 'LiquidPolicy', 'BuyerPolicy.NativeTests', 'StorageCatalog.NativeTests', 'BottlingAccess.NativeTests', 'Appraisal.NativeTests', 'BerryQuality.NativeTests', 'SecurityHighlights.NativeTests', 'CustomerHints.NativeTests')
-    inGameTested = $TargetedUiValidated.IsPresent
-    inGameTestScope = if ($TargetedUiValidated) { 'Targeted UI on an isolated save copy; controlled customers/items. See docs/runtime-validation-v0.3.0.md in source.' } else { 'Not asserted by this package invocation.' }
+    tests = @('StoragePolicy', 'GridPacking', 'GridPacking.IncrementalTests', 'StockPlanner', 'LiquidPolicy', 'BuyerPolicy.NativeTests', 'StorageCatalog.NativeTests', 'StowIncremental.NativeTests', 'BottlingAccess.NativeTests', 'Appraisal.NativeTests', 'BerryQuality.NativeTests', 'SecurityHighlights.NativeTests', 'CustomerHints.NativeTests', 'Authenticity.NativeTests', 'DisplayFixtures.NativeTests', 'DailyVisitors.NativeTests', 'GunModding.NativeTests')
+    inGameTested = $TargetedUiValidated.IsPresent -or $UserRuntimeValidated.IsPresent
+    inGameTestScope = if ($TargetedUiValidated) { "Targeted UI on an isolated save copy; controlled customers/items. See $validationDoc in source." }
+        elseif ($UserRuntimeValidated) { "User-reported play with five supplied screenshots: hanging/settings UI, gun-mod result, authenticity button, appraisal filling, and berry badges in storage. No agent-controlled 0.5.0 playthrough or complete overnight/save validation asserted. See $validationDoc in source." }
+        else { 'Not asserted by this package invocation.' }
     fullPlaythroughTested = $false
 }
 $info | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output 'BUILD-INFO.json') -Encoding utf8

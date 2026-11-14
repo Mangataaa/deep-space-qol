@@ -49,7 +49,7 @@ namespace DeepSpaceQoL.Core
         public long OriginalScore, Score;
     }
 
-    internal static class GridPacking
+    internal static partial class GridPacking
     {
         // A bounded, deterministic multi-start search. A known complete original
         // is retained throughout; failed/expired searches never yield partial output.

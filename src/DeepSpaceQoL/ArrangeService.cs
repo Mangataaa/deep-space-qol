@@ -7,7 +7,7 @@ using DeepSpaceQoL.Core;
 
 namespace DeepSpaceQoL
 {
-    internal static class ArrangeService
+    internal static partial class ArrangeService
     {
         private sealed class Snapshot
         {

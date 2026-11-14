@@ -30,7 +30,7 @@ internal static class ControlPanel
         if (selectedIndex < 0) selectedIndex = pages.Count > 1 ? 1 : 0;
         selected = pages[selectedIndex].Inventory;
         var page = pages[selectedIndex];
-        var b = CustomUIManager.Instance.CreateWindow(WindowId, "深空管家 · 高级设置 · 0.3.1", CustomUIManager.LAYER_OVERLAY,
+        var b = CustomUIManager.Instance.CreateWindow(WindowId, "深空管家 · 高级设置 · 0.5.0", CustomUIManager.LAYER_OVERLAY,
             style: CustomUIManager.Style.Machinery);
         if (b == null) return;
         window = b.Handle;
@@ -40,7 +40,7 @@ internal static class ControlPanel
         b.BeginScrollFlexible();
         b.AddLabel("常用操作请使用原生窗口按钮、水源右键菜单和标签打印机。此处为高级设置与备用入口。");
         b.BeginRow().AddButton("一键上货", () => ModEntry.Execute(StockingService.Run))
-            .AddButton("一键收纳整理", () => ModEntry.Execute(() => StowService.Run(reclaimOffer)))
+            .AddButton("一键收纳整理", () => ModEntry.Execute(() => StowService.Start(reclaimOffer)))
             .AddButton("刷新容器列表", Open).End();
         b.AddToggle("收纳时同时收回交易称重区的自有商品", reclaimOffer, value => reclaimOffer = value);
         b.AddLabel("上货采用有限搜索，尽量贴近预算。备货后由你成交；柜台满时腾空后再点一次。");

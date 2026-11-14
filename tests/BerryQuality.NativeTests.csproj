@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="BerryQuality.NativeTests.cs" />
+    <Compile Include="../src/DeepSpaceQoL/VisibleItemViews.cs" Link="VisibleItemViews.cs" />
     <Compile Include="../src/DeepSpaceQoL/NativeBerryQuality.cs" Link="NativeBerryQuality.cs" />
     <Reference Include="Assembly-CSharp"><HintPath>$(ManagedDir)\Assembly-CSharp.dll</HintPath></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath></Reference>

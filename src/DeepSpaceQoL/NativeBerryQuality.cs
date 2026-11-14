@@ -66,24 +66,19 @@ internal static class NativeBerryQuality
     internal static void Refresh()
     {
         if (!active || !ModEntry.Enabled) return;
-        var root = RenderHandler.current?.windowRoot;
         var visible = new HashSet<GameItemElement>();
-        // The visible native window tree includes inventory, opened storage and trade-counter goods.
-        // Closed pages are excluded, and no inventory contents are traversed or changed.
-        if (root != null)
-            foreach (var node in root.GetComponentsInChildren<TreeNodeRender>(false))
+        foreach (var item in VisibleItemViews.Items())
+        {
+            if (!TryDescribe(item, out var quality)) continue;
+            visible.Add(item);
+            if (!Badges.TryGetValue(item, out var badge) || !badge.Matches(item))
             {
-                if (node.element is not GameItemElement item || !ReferenceEquals(node, item.handler) || item.isDebugMenu ||
-                    item.middle == null || !item.middle.gameObject.activeInHierarchy || item.background?.image == null ||
-                    !item.background.image.enabled || !TryDescribe(item, out var quality)) continue;
-                visible.Add(item);
-                if (!Badges.TryGetValue(item, out var badge))
-                {
-                    badge = new QualityBadge(item);
-                    Badges.Add(item, badge);
-                }
-                badge.Refresh(item, quality);
+                badge?.Destroy();
+                badge = new QualityBadge(item);
+                Badges[item] = badge;
             }
+            badge.Refresh(item, quality);
+        }
         foreach (var pair in Badges.ToArray())
             if (!visible.Contains(pair.Key) || pair.Key.handler == null)
             {
@@ -167,9 +162,13 @@ internal static class NativeBerryQuality
     private sealed class QualityBadge
     {
         private readonly TreeNodeRender background, label;
+        private readonly TreeNodeRender host;
+        internal bool Matches(GameItemElement item) => background != null && label != null &&
+            host != null && ReferenceEquals(item.middle, host) && background.transform.parent == host.transform;
 
         internal QualityBadge(GameItemElement item)
         {
+            host = item.middle;
             background = TreeNodeRender.Instantiate().SetParent(item.middle);
             background.gameObject.name = "DeepSpaceQoL berry quality badge";
             background.image.raycastTarget = false;
