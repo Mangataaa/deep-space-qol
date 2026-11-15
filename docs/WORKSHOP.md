@@ -2,6 +2,16 @@
 
 ## 当前发布
 
+0.5.1 新增违禁品买家与超科技走私犯夜间服务免冷却、水瓶打印机打印原生 6L 空水壶。通过 19 套离线回归及原生模组扫描，用户确认后发布；截图与验证边界见 `runtime-validation-v0.5.1.md`，发布说明见 `../release/release-notes-v0.5.1.md`。
+
+发布 DLL 与本地已复测版一致，SHA-256：`0f37919e0156764b87815fe847127e72ff2aa0ae37939ca4db794365e68fc57c`。工坊沿用条目 `3836735823` 和原封面，追加 `release/media/gallery-v0.5.1/12-water-jug-printer-v0.5.1.jpg`，保留已有 11 张图。GitHub 标记为 v0.5.1 公开测试版，附件为独立六文件成品 ZIP 和同名 `.sha256`。
+
+六文件成品 ZIP SHA-256：`05f1779e99e660a043ef51bbd66d9bab7a39d84ba61dd704ed3beb94ec331796`。
+
+使用 `scripts/New-WorkshopGallery.ps1 -JugPrinterImage <原图> -OutputDirectory <本版目录>` 保留完整游戏画面并加标题。发布上传显式传本版独立图库目录，只追加这一张，不重复上传历史图片。打包用 `-UserRuntimeValidated`，范围由本版记录说明，不声称完整周目验证。本轮不重新安装本地 DLL，不改玩家存档。
+
+## 0.5.0 发布记录
+
 0.5.0 汇总悬挂陈列、暗灯桌面、分帧收纳、真伪鉴定、箱内品质／风险提示，并新增每日普通顾客逐项概率选项与一键改装。通过 17 套离线回归和原生模组扫描，用户复测反馈及五张实机截图范围见 `runtime-validation-v0.5.0.md`，发布说明见 `../release/release-notes-v0.5.0.md`。
 
 发布 DLL 与用户复测的本地 0.5.0 一致，SHA-256：`67fba552fa700e74e47a43dec743ff586b9a3401a5f5f96bc3298f7300d6199f`。六文件成品 ZIP SHA-256：`236dec6a64cdf507d6ffbb2dd13ed857d833cc0f64c541f3112e7a210df40b41`。GitHub 使用 [v0.5.0 公开测试版](https://github.com/Mangataaa/deep-space-qol/releases/tag/v0.5.0)，工坊沿用条目 `3836735823` 及原游戏像素封面。

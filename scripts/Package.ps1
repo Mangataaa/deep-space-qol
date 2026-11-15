@@ -29,10 +29,10 @@ $info = [ordered]@{
     builtAt = (Get-Date).ToString('o')
     targetFramework = 'netstandard2.1'
     gameAssemblySha256 = (Get-FileHash -LiteralPath (Join-Path $game 'Probably Stolen_Data\Managed\Assembly-CSharp.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
-    tests = @('StoragePolicy', 'GridPacking', 'GridPacking.IncrementalTests', 'StockPlanner', 'LiquidPolicy', 'BuyerPolicy.NativeTests', 'StorageCatalog.NativeTests', 'StowIncremental.NativeTests', 'BottlingAccess.NativeTests', 'Appraisal.NativeTests', 'BerryQuality.NativeTests', 'SecurityHighlights.NativeTests', 'CustomerHints.NativeTests', 'Authenticity.NativeTests', 'DisplayFixtures.NativeTests', 'DailyVisitors.NativeTests', 'GunModding.NativeTests')
+    tests = @('StoragePolicy', 'GridPacking', 'GridPacking.IncrementalTests', 'StockPlanner', 'LiquidPolicy', 'BuyerPolicy.NativeTests', 'StorageCatalog.NativeTests', 'StowIncremental.NativeTests', 'BottlingAccess.NativeTests', 'Appraisal.NativeTests', 'BerryQuality.NativeTests', 'SecurityHighlights.NativeTests', 'CustomerHints.NativeTests', 'Authenticity.NativeTests', 'DisplayFixtures.NativeTests', 'DailyVisitors.NativeTests', 'GunModding.NativeTests', 'ServiceCooldowns.NativeTests', 'WaterJugPrinter.NativeTests')
     inGameTested = $TargetedUiValidated.IsPresent -or $UserRuntimeValidated.IsPresent
     inGameTestScope = if ($TargetedUiValidated) { "Targeted UI on an isolated save copy; controlled customers/items. See $validationDoc in source." }
-        elseif ($UserRuntimeValidated) { "User-reported play with five supplied screenshots: hanging/settings UI, gun-mod result, authenticity button, appraisal filling, and berry badges in storage. No agent-controlled 0.5.0 playthrough or complete overnight/save validation asserted. See $validationDoc in source." }
+        elseif ($UserRuntimeValidated) { "User-reported play and supplied screenshots for version $version. Exact evidence, confirmed scope and exclusions are recorded in $validationDoc in source. No agent-controlled full playthrough or complete overnight/save validation asserted." }
         else { 'Not asserted by this package invocation.' }
     fullPlaythroughTested = $false
 }

@@ -11,6 +11,7 @@ param(
     [string]$AuthenticityImage,
     [string]$AppraisalImage,
     [string]$BerryStorageImage,
+    [string]$JugPrinterImage,
     [string]$OutputDirectory = (Join-Path (Split-Path -Parent $PSScriptRoot) 'release\media\gallery')
 )
 Set-StrictMode -Version Latest
@@ -46,7 +47,10 @@ if ($HangingImage -or $GunModdingImage -or $AuthenticityImage -or $AppraisalImag
         @{ Path = $BerryStorageImage; Name = '11-berry-storage-v0.5.0.jpg'; Title = '打开储物箱，也能直接区分莓果品质'; Version = '0.5.0' }
     )
 }
-if ($images.Count -eq 0) { throw 'Provide a gallery image set, bottling image pair or 0.5.0 feature screenshots.' }
+if ($JugPrinterImage) {
+    $images += @{ Path = $JugPrinterImage; Name = '12-water-jug-printer-v0.5.1.jpg'; Title = '水瓶打印机：原生 6L 空水壶，耗电 33'; Version = '0.5.1' }
+}
+if ($images.Count -eq 0) { throw 'Provide a gallery image set or a supported feature screenshot.' }
 $encoder = [Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object MimeType -EQ 'image/jpeg'
 foreach ($entry in $images) {
     $source = [Drawing.Image]::FromFile((Resolve-Path -LiteralPath $entry.Path).Path)

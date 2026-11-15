@@ -12,9 +12,10 @@ public sealed class ModEntry : IMod
     internal static bool Enabled;
     private static bool busy;
     private static ConfigEntry<KeyCode>? panelKey, stockKey, stowKey;
-    private static ConfigEntry<bool>? expectedVisitors;
+    private static ConfigEntry<bool>? expectedVisitors, removeServiceCooldowns;
     internal static bool ExpectedVisitorsEnabled => expectedVisitors?.Value ?? false;
     internal static void SetExpectedVisitors(bool value) => expectedVisitors?.Set(value);
+    internal static bool RemoveServiceCooldowns => removeServiceCooldowns?.Value ?? true;
 
     public void Init(ModManifest manifest)
     {
@@ -25,7 +26,9 @@ public sealed class ModEntry : IMod
         stowKey = config.DefineEnum("stow_key", KeyCode.None, "操作", () => "一键收纳快捷键（默认未绑定）");
         expectedVisitors = config.Define("daily_expected_visitors", false, "顾客", () => "每日逐项判定预期普通顾客",
             () => "按各来源原概率分别判定，突破原普通顾客配额；不足原名额则随机补足。仅影响下一次每日排程，不重抽今天，不改变剧情来客。");
-        Log.Log("深空管家 0.5.0：可选预期普通顾客逐项判定、委托枪械一键改装、悬挂避让日历。保留卢剧情保护与储物锁定。");
+        removeServiceCooldowns = config.Define("remove_illegal_service_cooldowns", true, "顾客", () => "取消违禁品买家和超科技走私犯服务冷却",
+            () => "默认开启。两项夜间服务可连续选择，旧存档剩余冷却也忽略；仍需解锁、勾选并支付原费用。不修改存档冷却计数，关闭后恢复原判定。");
+        Log.Log("深空管家 0.5.1：违禁品买家与超科技走私犯服务免冷却；水瓶打印机可打印原生6L空水壶。保留既有上货、收纳、鉴定与悬挂功能。");
     }
 
     public void OnEnable()
@@ -40,6 +43,9 @@ public sealed class ModEntry : IMod
         ModHelper.AddGameOptionToggle(Id, "qol", "daily_expected_visitors", () => "每日逐项判定预期普通顾客（次日起）",
             () => ExpectedVisitorsEnabled, SetExpectedVisitors,
             () => "默认关闭。开启后每项预期普通顾客按原概率独立判定，不受原普通名额上限截断；原名额不足时继续随机补足，剧情日程不改。");
+        ModHelper.AddGameOptionToggle(Id, "qol", "remove_illegal_service_cooldowns", () => "取消违禁品买家／超科技走私犯服务冷却",
+            () => RemoveServiceCooldowns, value => removeServiceCooldowns?.Set(value),
+            () => "默认开启。忽略两项服务的等待天数，费用和解锁条件照旧；不重排今天顾客，不影响其他服务。关闭后按原存档计数判断。");
         ModHelper.AddDebugFunction(Id, ModHelper.DEBUG_CATEGORY_STORE, "深空管家", ControlPanel.Open);
         // OnEnable executes before the loader registers this mod as running.
         ModHelper.RunOnMainThread(Id, () =>
@@ -62,6 +68,7 @@ public sealed class ModEntry : IMod
         GunModdingService.Cancel();
         NativeGunModding.Dispose();
         NativeDailyVisitors.Dispose();
+        NativeWaterJugPrinter.Dispose();
         NativeDisplayFixtures.Dispose();
         Enabled = false;
         ModHook.OnGameLoadedLate -= OnLoaded;
@@ -90,6 +97,7 @@ public sealed class ModEntry : IMod
         GunModdingService.Cancel();
         NativeGunModding.Dispose();
         NativeDailyVisitors.Dispose();
+        NativeWaterJugPrinter.Dispose();
         NativeDisplayFixtures.ResetForLoad();
         NativeStorageLabels.Dispose();
         NativeInventoryButtons.Dispose();
@@ -130,6 +138,7 @@ public sealed class ModEntry : IMod
                 RefreshUi(NativeDisplayFixtures.Refresh, "独立陈列区");
                 RefreshUi(NativeDailyVisitors.Refresh, "预期顾客规则");
                 RefreshUi(NativeGunModding.Refresh, "一键改装");
+                RefreshUi(NativeWaterJugPrinter.Refresh, "打印水壶");
             }
             if (Typing()) continue;
             if (Down(panelKey)) ControlPanel.Toggle();

@@ -3,8 +3,8 @@
   <ID>deep_space_qol</ID>
   <Name>深空管家 / Deep Space QoL</Name>
   <Author>Deep Space QoL contributors</Author>
-  <ModVersion>0.5.0</ModVersion>
-  <Description>悬挂管理窗可选每日逐项判定预期普通顾客；枪械改造委托一键匹配仓库配件，交付由玩家确认。灯牌避让日历，保留鉴定、箱内品质与风险提示、剧情保护、分类收纳和右键装瓶。</Description>
+  <ModVersion>0.5.1</ModVersion>
+  <Description>违禁品买家与超科技走私犯夜间服务免冷却，水瓶打印机新增原生6L空水壶。保留每日逐项顾客、枪械一键改装、悬挂陈列、鉴定、箱内提示、剧情保护、分类收纳和右键装瓶。</Description>
   <GameVersions><Version>0.46</Version></GameVersions>
   <Prerequisites />
   <Assemblies><Assembly>DeepSpaceQoL.dll</Assembly></Assemblies>
