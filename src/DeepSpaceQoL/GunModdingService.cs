@@ -43,6 +43,9 @@ internal static class GunModdingService
         internal GridShape GunShape = null!;
         internal string GunFingerprint = "", OrderFingerprint = "";
         internal GameSlotInventory[] Slots = null!;
+        internal int[] SlotKinds = null!;
+        internal bool UsesGsxRules;
+        internal ItemStateSnapshot GunState = null!;
         internal GameItem?[] Original = null!;
         internal List<Part> Parts = new();
         internal Dictionary<Option, List<GridShape>> Shapes = new();
@@ -92,6 +95,7 @@ internal static class GunModdingService
         {
             if (generation != ticket || !IsRunning) return false;
             if (!ModEntry.Enabled || !ReferenceEquals(EmporiumEntry.Instance, entry) || !PlayerStore.HasInstance ||
+                session.UsesGsxRules != GunsmithExpansionCompatibility.IsActive ||
                 PlayerStore.Instance.saveSlotId != saveSlot || !HasOrder() ||
                 !ReferenceEquals(PlayerStore.Instance.currentClientInstance.GetClientBlueprint(), session.Client) ||
                 !ReferenceEquals(session.Client.gunOrderData, session.Order) ||
@@ -173,6 +177,8 @@ internal static class GunModdingService
                 { report($"正在匹配配件：已检查 {scanned} 件。可按 Esc 取消。"); yield return null; slice.Restart(); if (!active()) yield break; }
             }
         }
+        if (problem.RequiredIdentifiers.Any(id => !options.Any(list => list.Any(o => o.Token >= 0 && o.Identifier == id))))
+        { report("这份非致命枪改造委托需要致命转换套件；当前没有可用套件或适配的空闲特殊槽。未移动配件，请检查库存与锁定规则。"); yield break; }
         // Keep enough independent copies for every slot, including multi-slot third-party parts.
         // Identical special identifiers are still disallowed by the native special-slot rule.
         var normalized = new List<Option[]>();
@@ -200,7 +206,8 @@ internal static class GunModdingService
         if (result.Choices == null)
         { report(result.SearchLimited ? "本轮限时搜索未找到完整达标方案，未移动配件。可补充配件后重试，或手动改装。" : "现有可用配件无法满足全部必需条件，或交易台空间不足。未移动配件。请补充兼容配件或手动维修枪况。"); yield break; }
         if (result.Changes == 0)
-        { report($"当前枪械已满足全部必需条件，附加条件 {result.BonusMet}/{s.Order.bonusRequirements.Count}。本轮无需更换配件，请手动交付。" + (result.SearchLimited ? "（采用限时搜索结果）" : "")); yield break; }
+        { report(s.Order.IsAccepted() ? $"当前枪械已满足全部必需条件，附加条件 {result.BonusMet}/{s.Order.bonusRequirements.Count}。本轮无需更换配件，请手动交付。" + (result.SearchLimited ? "（采用限时搜索结果）" : "")
+            : "当前方案未通过游戏及扩展模组的交付条件，未移动配件。请检查委托要求。"); yield break; }
         var returns = new List<ReturnPlace>();
         foreach (var step in PreflightReturns(s, result.Choices, returns, active)) yield return step;
         if (!active()) yield break;
@@ -217,10 +224,11 @@ internal static class GunModdingService
         var gun = GunOrderData.ResolveOrderGun();
         if (gun == null) { reason = "请先把本次委托枪放在交易区；只改装当前委托选中的枪械。"; return false; }
         if (!CanModifyGun(gun)) { reason = "当前委托枪已固定、被锁定或受保护，请解除相应限制后再改装。"; return false; }
-        if (!TrySlots(gun, out var slots)) { reason = "这把枪没有完整的原生改装槽，暂不支持自动改装。"; return false; }
+        if (!TrySlots(gun, out var slots, out var kinds)) { reason = "这把枪的改装槽布局尚未支持（枪匠扩展已适配 2.1.1），请手动改装。"; return false; }
         var s = new Session { Client = client, Order = client.gunOrderData, Gun = gun, GunSource = gun.parentInventory,
             GunShape = gun.modifiedShape.Clone(), GunFingerprint = Fingerprint(gun), OrderFingerprint = OrderFingerprint(client.gunOrderData),
-            Slots = slots, Original = slots.Select(slot => (GameItem?)slot.childItem).ToArray() };
+            Slots = slots, SlotKinds = kinds, UsesGsxRules = GunsmithExpansionCompatibility.IsActive, GunState = new ItemStateSnapshot(gun),
+            Original = slots.Select(slot => (GameItem?)slot.childItem).ToArray() };
         var children = GraphUtils.FindAllChildrenType<GameItem>(gun);
         if (children.Count != s.Original.Count(i => i != null) || children.Any(i => !s.Original.Contains(i) || !i.IsTag("WEAPON_MOD_TAG")))
         { reason = "枪械内部含非标准内容，已保留原状。请手动改装。"; return false; }
@@ -230,6 +238,7 @@ internal static class GunModdingService
         { reason = "该委托包含未知条件，暂不支持安全自动改装。"; return false; }
         s.Problem = new Problem { BaseStats = StatTags.Select(t => gun.GetTagReadonly(t).GetInt()).ToArray(),
             ConditionPercent = ConditionPercent(gun), Caliber = gun.GetTagReadonly("GUN_CALIBER_TAG").GetInt(),
+            RequiredIdentifiers = s.UsesGsxRules ? GunsmithExpansionCompatibility.RequiredParts(gun.identifier) : Array.Empty<string>(),
             Mandatory = mandatory, Bonus = bonus, BaseCells = Cells(gun.shape) };
         session = s; reason = ""; return true;
     }
@@ -246,7 +255,7 @@ internal static class GunModdingService
         item.unitCount == 1 && item.modifiedShape != null && CanUsePart(item) &&
         GraphUtils.FindAllChildrenType<GameItem>(item).Count == 0;
 
-    private static bool IsStockInventory(GameInventory inventory)
+    internal static bool IsStockInventory(GameInventory inventory)
     {
         if (inventory is not GameGridInventory) return false;
         var entry = EmporiumEntry.Instance;
@@ -257,24 +266,30 @@ internal static class GunModdingService
     private static bool CanUsePart(GameItem item) => StorageRules.CanAutomate(item) && !StorageRules.HasProtectedContents(item) &&
         item.unitCount == 1 && item.MayRemove() && item.MaxNumRemove() == 1;
 
-    private static bool TrySlots(GameItem gun, out GameSlotInventory[] slots)
+    private static bool TrySlots(GameItem gun, out GameSlotInventory[] slots, out int[] kinds)
     {
         slots = Array.Empty<GameSlotInventory>();
+        kinds = Array.Empty<int>();
         if (gun.contentWindow?.childElement is not MachineryPanelRow row) return false;
+        var expected = GunsmithExpansionCompatibility.IsActive ? GunsmithExpansionCompatibility.SlotKinds(gun.identifier) : null;
+        expected ??= Enumerable.Range(0, SlotRoles.Length).ToArray();
+        if (row.Panels.Count != expected.Length || row.Panels.Select(p => p.role).Distinct().Count() != expected.Length) return false;
         var found = new List<GameSlotInventory>();
-        foreach (string role in SlotRoles)
+        foreach (int kind in expected)
         {
-            var grid = row.GetPanel(role)?.content as GridPixelElement;
+            var grid = row.GetPanel(SlotRoles[kind])?.content as GridPixelElement;
             if (grid?.GetElement(0, 0) is not MachineryIntake intake || intake.content is not GameSlotInventory slot || slot.GetParentItem() != gun) return false;
             found.Add(slot);
         }
-        slots = found.ToArray(); return slots.Distinct().Count() == SlotRoles.Length;
+        slots = found.ToArray(); kinds = expected; return slots.Distinct().Count() == expected.Length;
     }
 
     private static bool TryOption(Session s, GameItem item, int index, int token, bool isNew, int changes, out Option? option)
     {
         option = null; var slot = s.Slots[index];
-        if (!item.IsTag("WEAPON_MOD_TAG") || !item.IsTag(SlotTags[index])) return false;
+        int kind = s.SlotKinds[index];
+        if (!item.IsTag("WEAPON_MOD_TAG") || !item.IsTag(SlotTags[kind]) ||
+            s.UsesGsxRules && !GunsmithExpansionCompatibility.AllowsPart(s.Gun.identifier, kind, item)) return false;
         if (!GeneralHelper.MayOwnershipAcceptItem(item, slot) ||
             item.mayInventoryAddItemFunc != null && !item.mayInventoryAddItemFunc.InvokeAllReduce(item, slot, InvokeFuncExtensions.BoolReduceOR)) return false;
         var marker = new SlotMarker { item = item, inventory = slot, itemGridShape = new GridShapeBuilder(item.modifiedShape).SetTransform(0, 0, false, slot.defaultOrientation) };
@@ -289,7 +304,7 @@ internal static class GunModdingService
         option = new Option { Token = token, Identifier = item.identifier ?? "", ExclusiveGroup = GunModHelper.GetExclusiveGroup(item) ?? "",
             Percent = StatTags.Select(t => item.GetTagReadonly(t).GetInt()).ToArray(), Flat = FlatTags.Select(t => item.GetTagReadonly(t).GetInt()).ToArray(),
             Suppression = item.IsTag("MOD_SUPPRESSOR_TAG") ? item.IsGameItemType("MAKESHIFT") ? 1 : 2 : 0,
-            ShapeCells = shapes.SelectMany(Cells).Distinct().ToArray(), Special = index >= 5,
+            ShapeCells = shapes.SelectMany(Cells).Distinct().ToArray(), Special = kind >= 5,
             IsNew = isNew, Changes = changes, Cost = Math.Max(0, item.GetCurrentValue(false, false, true, true, 0L)) };
         s.Shapes.Add(option, shapes); return true;
     }
@@ -393,9 +408,10 @@ internal static class GunModdingService
                 Move(item, s.Slots[i], item.modifiedShape);
             }
             s.Gun.ValidateShapeState(); GunHelper.UpdateCurrentGunStats(s.Gun);
-            if (!s.Order.mandatoryRequirements.All(r => r.IsMet(s.Gun)) || s.Order.CountBonusMet(s.Gun) != bonus ||
+            if (!s.Order.IsAccepted() || !s.Order.mandatoryRequirements.All(r => r.IsMet(s.Gun)) || s.Order.CountBonusMet(s.Gun) != bonus ||
                 CurrentTags.Where((tag, i) => s.Gun.GetTagReadonly(tag).GetInt() != predicted[i]).Any() ||
-                s.Gun.GetTagReadonly("GUN_SUPPRESSED_TAG").GetInt() != predicted[6] || s.Gun.GetModifiedItemSize() != predicted[8] ||
+                s.Gun.GetTagReadonly("GUN_SUPPRESSED_TAG").GetInt() != predicted[6] ||
+                s.Gun.GetTagReadonly("GUN_CALIBER_TAG").GetInt() != predicted[7] || s.Gun.GetModifiedItemSize() != predicted[8] ||
                 !s.GunSource.CheckInventorySlotStillValid(s.Gun, s.Gun.modifiedShape, s.Gun.modifiedState) ||
                 choices.Where((o, i) => !ReferenceEquals(s.Slots[i].childItem, o.Token < 0 ? null : s.Parts[o.Token].Item)).Any() ||
                 returns.Any(r => !ReferenceEquals(r.Part.Item.parentInventory, r.Inventory)))
@@ -430,7 +446,7 @@ internal static class GunModdingService
 
     private static void VerifyRestore(Session s, Part[] changed)
     {
-        s.Gun.ValidateShapeState(); GunHelper.UpdateCurrentGunStats(s.Gun);
+        RestoreGunState(s.Gun, s.GunState);
         foreach (var part in changed)
             if (!ReferenceEquals(part.Item.parentInventory, part.Source) || !SameShape(part.Item.modifiedShape, part.Shape) || Fingerprint(part.Item) != part.Fingerprint)
                 throw new InvalidOperationException("配件恢复校验失败。");
@@ -440,9 +456,18 @@ internal static class GunModdingService
         PlayerStore.Instance.OnWeightedAreaChanged();
     }
 
+    internal static void RestoreGunState(GameItem gun, ItemStateSnapshot snapshot)
+    {
+        // Conversion callbacks may leave permanent contraband/permit tags after a kit is removed.
+        // Restore the gun itself only after every original part has been restored.
+        snapshot.Restore(gun);
+        gun.ValidateShapeState(); GunHelper.UpdateCurrentGunStats(gun);
+    }
+
     private static void ValidateUnchanged(Session s, Option[] choices)
     {
         if (!HasOrder() || !ReferenceEquals(PlayerStore.Instance.currentClientInstance.GetClientBlueprint(), s.Client) ||
+            s.UsesGsxRules != GunsmithExpansionCompatibility.IsActive ||
             !ReferenceEquals(s.Client.gunOrderData, s.Order) || !ReferenceEquals(GunOrderData.ResolveOrderGun(), s.Gun) ||
             !CanModifyGun(s.Gun) || !ReferenceEquals(s.Gun.parentInventory, s.GunSource) ||
             !SameShape(s.Gun.modifiedShape, s.GunShape) || Fingerprint(s.Gun) != s.GunFingerprint ||
@@ -517,6 +542,7 @@ internal static class GunModdingService
                 .Append(':').Append(t.valueBool).Append(':').Append(t.valueString?.Length ?? 0).Append(':').Append(t.valueString);
         }
         foreach (var feature in item.itemFeatures) b.Append("|feature:").Append(feature.identifier);
+        foreach (var type in item.itemTypes) b.Append("|type:").Append(type);
         return b.ToString();
     }
 }

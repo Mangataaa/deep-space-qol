@@ -41,6 +41,8 @@ internal static class GunModificationPlanner
         public long[] BaseCells = Array.Empty<long>();
         public Requirement[] Mandatory = Array.Empty<Requirement>();
         public Requirement[] Bonus = Array.Empty<Requirement>();
+        // Some optional expansions add acceptance rules outside native numeric requirements.
+        public string[] RequiredIdentifiers = Array.Empty<string>();
         public Option[][] Slots = Array.Empty<Option[]>();
         public Func<Option[], bool>? Validate;
         public int MaxNodes = 1_000_000;
@@ -129,6 +131,9 @@ internal static class GunModificationPlanner
 
         private bool CanStillMeetMandatory(int assigned)
         {
+            foreach (string identifier in problem.RequiredIdentifiers)
+                if (!choices.Take(assigned).Any(o => o.Token >= 0 && o.Identifier == identifier) &&
+                    !problem.Slots.Skip(assigned).Any(slot => slot.Any(o => o.Token >= 0 && o.Identifier == identifier))) return false;
             foreach (var requirement in problem.Mandatory)
             {
                 if (requirement.Stat == 7)
@@ -159,6 +164,7 @@ internal static class GunModificationPlanner
         private void Evaluate()
         {
             var values = Calculate(problem.BaseStats, problem.ConditionPercent, problem.Caliber, problem.BaseCells, choices);
+            if (problem.RequiredIdentifiers.Any(id => !choices.Any(o => o.Token >= 0 && o.Identifier == id))) return;
             if (problem.Mandatory.Any(r => !r.IsMet(values[r.Stat]))) return;
             int met = 0, added = 0, changes = 0;
             long reward = 0, cost = 0;

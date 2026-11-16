@@ -98,7 +98,7 @@ internal static class NativeInventoryButtons
             // TooltipContainer caches TooltipInterface in Awake. Recreate it only on our inactive clone.
             foreach (var tooltip in stockClone.GetComponents<TooltipContainer>()) Object.Destroy(tooltip);
             var action = stockClone.AddComponent<StockButtonAction>();
-            action.Description = "一键上货：按当前买家的需求和剩余预算，将自有未锁定物品放到交易区。不会自动确认出售。";
+            action.Description = "一键上货：普通买家按需求与预算备货；定制枪委托上架一把满足全部必需条件的库存整枪。只取用自有未锁定物品，由你确认交付。";
             var interactable = stockClone.GetComponent<Interactable>();
             if (interactable != null) interactable.isControlable = false;
             var renderers = stockClone.GetComponentsInChildren<SpriteRenderer>(true);

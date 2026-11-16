@@ -172,6 +172,8 @@ static class GunTests
                 IsNew = true, Changes = 1, Cost = random.Next(1, 100) }).ToArray()).ToArray();
             p.Mandatory = Enumerable.Range(0, 2).Select(_ => new Requirement { Stat = random.Next(6), Value = random.Next(0, 100), Larger = random.Next(2) == 0 }).ToArray();
             p.Bonus = Enumerable.Range(0, 3).Select(_ => new Requirement { Stat = random.Next(6), Value = random.Next(0, 100), Larger = random.Next(2) == 0, Reward = random.Next(1, 100) }).ToArray();
+            if (test % 3 == 0) p.RequiredIdentifiers = new[] { "mod_" + random.Next(6) };
+            if (test % 9 == 0) p.RequiredIdentifiers = new[] { "mod_" + random.Next(6), "mod_" + random.Next(6) };
             var brute = Brute(p); var sliced = Solve(p, 1); var batched = Solve(p, 1000);
             Check((brute == null) == (sliced.Choices == null), "random exhaustive existence agrees, including negative modifiers and lower requirements");
             Check((batched.Choices == null) == (sliced.Choices == null), "frame slicing does not change existence");
@@ -195,6 +197,7 @@ static class GunTests
                     if (used[i].ExclusiveGroup != "" && used[i].ExclusiveGroup == used[j].ExclusiveGroup ||
                         (used[i].Special || used[j].Special) && used[i].Identifier == used[j].Identifier) return;
                 var values = GunModificationPlanner.Calculate(p.BaseStats, p.ConditionPercent, p.Caliber, p.BaseCells, selected);
+                if (p.RequiredIdentifiers.Any(id => !used.Any(o => o.Identifier == id))) return;
                 if (p.Mandatory.Any(r => !r.IsMet(values[r.Stat]))) return;
                 if (best == null || LexGreater(Score(p, selected), Score(p, best))) best = selected.ToArray();
                 return;

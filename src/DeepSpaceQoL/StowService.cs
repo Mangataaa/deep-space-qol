@@ -131,7 +131,7 @@ internal static partial class StowService
         (((IsPortablePackage(item) || IsCompositeGood(item)) && !StorageRules.HasProtectedContents(item)) ||
             (item.contentWindow == null && !item.IsTag("CONTAINER_TAG") && !item.IsTag("PRE_CONTAINER_TAG")));
 
-    private static SlotMarker? FindWholeSlot(GameGridInventory inventory, GameItem item)
+    internal static SlotMarker? FindWholeSlot(GameGridInventory inventory, GameItem item)
     {
         if (!inventory.MayHaveValidInventorySlot(item) || !item.MayRemove() || item.MaxNumRemove() < item.unitCount) return null;
         var box = inventory.inventoryShape;

@@ -29,6 +29,8 @@ public static class StockingService
             return "尚无到店买家。";
         if (MapUIManager.Instance != null && MapUIManager.Instance.IsOutside)
             return "请回到店内再上货。";
+        if (client.clientIntent == StoreClient.ClientIntent.GUNSMITH)
+            return GunOrderStockingService.Run(client);
         if (!client.IsClientBuying() || client.isBusinessComplete || NegociationUIManager.IsTradeLocked())
             return "当前顾客不是可交易买家，或交易暂时锁定。";
         if (!client.useClientBudget)

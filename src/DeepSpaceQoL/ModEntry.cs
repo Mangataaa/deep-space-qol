@@ -28,7 +28,7 @@ public sealed class ModEntry : IMod
             () => "按各来源原概率分别判定，突破原普通顾客配额；不足原名额则随机补足。仅影响下一次每日排程，不重抽今天，不改变剧情来客。");
         removeServiceCooldowns = config.Define("remove_illegal_service_cooldowns", true, "顾客", () => "取消违禁品买家和超科技走私犯服务冷却",
             () => "默认开启。两项夜间服务可连续选择，旧存档剩余冷却也忽略；仍需解锁、勾选并支付原费用。不修改存档冷却计数，关闭后恢复原判定。");
-        Log.Log("深空管家 0.7.3：分析仪底部一键配比、批量制药与箱体命名，保留原生化学流程及剧情保护。");
+        Log.Log("深空管家 0.7.6：定制枪委托整枪上货，兼容 Gunsmith Expansion 2.1.1 改装，保留最终交付检查与回滚保护。");
     }
 
     public void OnEnable()
