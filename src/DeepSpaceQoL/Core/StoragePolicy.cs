@@ -16,8 +16,10 @@ public sealed class StoragePolicy
 {
     public int Version { get; set; } = 1;
     public bool ContainerLocked { get; set; }
+    /// <summary>Display-only name for the whole container; native page names remain separate.</summary>
+    public string ContainerName { get; set; } = "";
     public Dictionary<int, PageRule> Pages { get; set; } = new();
-    public bool IsValid() => Version == 1 && Pages != null && Pages.All(p => p.Key >= 0 && p.Value != null);
+    public bool IsValid() => Version == 1 && Pages != null && ContainerName != null && Pages.All(p => p.Key >= 0 && p.Value != null);
     public bool IsSaleProtected(int? pageIndex = null) => !IsValid() || ContainerLocked ||
         (pageIndex.HasValue ? Pages.TryGetValue(pageIndex.Value, out var p) && p.SaleLocked : Pages.Values.Any(p => p.SaleLocked));
     public PageRule Page(int index)

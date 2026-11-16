@@ -27,9 +27,10 @@ $info = [ordered]@{
     modId = $script:ModId
     version = $version
     builtAt = (Get-Date).ToString('o')
+    gmIncluded = $false
     targetFramework = 'netstandard2.1'
     gameAssemblySha256 = (Get-FileHash -LiteralPath (Join-Path $game 'Probably Stolen_Data\Managed\Assembly-CSharp.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
-    tests = @('StoragePolicy', 'GridPacking', 'GridPacking.IncrementalTests', 'StockPlanner', 'LiquidPolicy', 'BuyerPolicy.NativeTests', 'StorageCatalog.NativeTests', 'StowIncremental.NativeTests', 'BottlingAccess.NativeTests', 'Appraisal.NativeTests', 'BerryQuality.NativeTests', 'SecurityHighlights.NativeTests', 'CustomerHints.NativeTests', 'Authenticity.NativeTests', 'DisplayFixtures.NativeTests', 'DailyVisitors.NativeTests', 'GunModding.NativeTests', 'ServiceCooldowns.NativeTests', 'WaterJugPrinter.NativeTests')
+    tests = @('StoragePolicy', 'GridPacking', 'GridPacking.IncrementalTests', 'StockPlanner', 'LiquidPolicy', 'BuyerPolicy.NativeTests', 'StorageCatalog.NativeTests', 'StowIncremental.NativeTests', 'BottlingAccess.NativeTests', 'Appraisal.NativeTests', 'BerryQuality.NativeTests', 'SecurityHighlights.NativeTests', 'CustomerHints.NativeTests', 'Authenticity.NativeTests', 'DisplayFixtures.NativeTests', 'DailyVisitors.NativeTests', 'GunModding.NativeTests', 'ServiceCooldowns.NativeTests', 'WaterJugPrinter.NativeTests', 'ChemicalBatch.NativeTests', 'ChemicalMix.NativeTests')
     inGameTested = $TargetedUiValidated.IsPresent -or $UserRuntimeValidated.IsPresent
     inGameTestScope = if ($TargetedUiValidated) { "Targeted UI on an isolated save copy; controlled customers/items. See $validationDoc in source." }
         elseif ($UserRuntimeValidated) { "User-reported play and supplied screenshots for version $version. Exact evidence, confirmed scope and exclusions are recorded in $validationDoc in source. No agent-controlled full playthrough or complete overnight/save validation asserted." }
@@ -37,7 +38,7 @@ $info = [ordered]@{
     fullPlaythroughTested = $false
 }
 $info | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output 'BUILD-INFO.json') -Encoding utf8
-Invoke-DotNet -Arguments @('run', '--project', (Join-Path $script:RepositoryRoot 'tools\NativeAudit\NativeAudit.csproj'), '-c', 'Release', "--property:GameDir=$game", '--', (Join-Path $game 'Probably Stolen_Data\Managed'), $output)
+Invoke-DotNet -Arguments @('run', '--project', (Join-Path $script:RepositoryRoot 'tools\NativeAudit\NativeAudit.csproj'), '-c', 'Release', "--property:GameDir=$game", '--', (Join-Path $game 'Probably Stolen_Data\Managed'), $output, '--require-no-gm')
 $sums = foreach ($file in (Get-ChildItem -LiteralPath $output -File | Sort-Object Name)) {
     (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + $file.Name
 }

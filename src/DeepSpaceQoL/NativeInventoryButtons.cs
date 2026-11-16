@@ -193,14 +193,18 @@ internal static class NativeInventoryButtons
         {
             this.window = window; this.owner = owner;
             // Small containers cannot fit three header controls without covering the native title/close button.
-            useHeader = window.style == WindowStyle.Machinery && window.widthPixels >= (owner == null ? 112 : 200);
+            useHeader = window.style == WindowStyle.Machinery && window.widthPixels >= (owner == null ? 112 : 240);
             Add(new MachineryButton("整理", () => Run(SortCurrent), 32, 16)
                 .SetDescription("整理当前打开的这一页：同种物品相邻，紧凑摆放。不会整理其他页。"));
             if (owner == null)
+            {
                 Add(new MachineryButton("收纳", () => Run(() => StowService.Start()), 32, 16)
                     .SetDescription("一键收纳整理：按分类标签归入储物柜或箱子，缺少标签时使用可用的储物空间。"));
+            }
             else
             {
+                Add(new MachineryButton("命名", () => Run(OpenName), 32, 16)
+                    .SetDescription("给整个储物箱命名；名称显示在箱体正面，与页签名称分开保存。"));
                 Add(new MachineryButton("标签", () => Run(OpenLabels), 32, 16)
                     .SetDescription("打开原生标签打印机，为当前页勾选游戏分类。名称和分类分别保存。"));
                 pageLock = new MachineryButton("页", () => Run(() => ToggleLock(false)), 32, 16).SetIcon(LockIcon(false));
@@ -265,6 +269,13 @@ internal static class NativeInventoryButtons
             if (owner == null || current == null) return "未找到当前打开的储物页。";
             NativeStorageLabels.OpenFor(owner, current.Index);
             return "已打开当前储物页的标签打印机。勾选分类立即生效，随原生存档保存。";
+        }
+
+        private string OpenName()
+        {
+            if (owner == null) return "未找到当前储物箱。";
+            NativeStorageNaming.Open(owner);
+            return "已打开储物箱命名窗口。";
         }
 
         internal void Refresh()

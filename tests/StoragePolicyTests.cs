@@ -24,10 +24,16 @@ Check(!policy.IsSaleProtected(0), "Other tab stays unlocked");
 Check(policy.IsSaleProtected(), "Selling whole box cannot bypass a locked tab");
 Check(!policy.IsSaleProtected(9), "New tab defaults unlocked");
 policy.ContainerLocked = true;
+policy.ContainerName = "配比药剂柜";
 Check(policy.IsSaleProtected(0) && policy.IsSaleProtected(9), "Whole box protects every tab");
 string json = JsonConvert.SerializeObject(policy);
 var restored = JsonConvert.DeserializeObject<StoragePolicy>(json)!;
 Check(restored.IsValid() && restored.ContainerLocked, "Native serializer round-trip container lock");
+Check(restored.ContainerName == "配比药剂柜", "Whole-box Chinese display name survives native policy serialization");
+var legacy = JsonConvert.DeserializeObject<StoragePolicy>("{\"Version\":1,\"ContainerLocked\":true,\"Pages\":{\"2\":{\"Label\":\"旧页名\",\"SaleLocked\":true}}}")!;
+Check(legacy.IsValid() && legacy.ContainerName == "" && legacy.ContainerLocked && legacy.Page(2).SaleLocked,
+    "Legacy saves with no box name retain every lock and page name");
+Check(new StoragePolicy { ContainerName = null! }.IsSaleProtected(), "Malformed new name data never removes protection");
 Check(restored.Page(1).SaleLocked && restored.Page(1).Restrict, "Round-trip flags");
 Check(restored.Page(1).Label == "食物专用" && restored.Page(1).Categories == "食物,水", "Round-trip Chinese names/categories");
 Check(!restored.Pages.ContainsKey(0), "Reading absent tab lock does not mutate dictionary");

@@ -8,6 +8,7 @@ if (args.Length < 2)
     return 2;
 }
 string managed = Path.GetFullPath(args[0]), folder = Path.GetFullPath(args[1]);
+bool requireNoGm = args.Skip(2).Contains("--require-no-gm", StringComparer.Ordinal);
 AssemblyLoadContext.Default.Resolving += (_, name) =>
 {
     string candidate = Path.Combine(managed, name.Name + ".dll");
@@ -72,6 +73,25 @@ void ValidateInjections(Type patchType, MethodBase original)
 }
 foreach (var path in dlls)
 {
+    if (requireNoGm)
+    {
+        using var binary = DseCecil.AssemblyDefinition.ReadAssembly(path);
+        var privateTypes = new List<string>();
+        var privateStrings = new List<string>();
+        void InspectPublicType(DseCecil.TypeDefinition type)
+        {
+            if (type.Name.StartsWith("Gm", StringComparison.Ordinal) || type.Name.Contains("GmItem", StringComparison.Ordinal)) privateTypes.Add(type.FullName);
+            foreach (var method in type.Methods.Where(m => m.HasBody))
+                foreach (var instruction in method.Body.Instructions.Where(i => i.OpCode == DseCecil.Cil.OpCodes.Ldstr))
+                    if (instruction.Operand is string text && new[] { "gm_enabled", "gm_key", "GM 工作台", "启用 GM", "GM 正在生成" }.Any(text.Contains))
+                        privateStrings.Add(type.FullName + "." + method.Name);
+            foreach (var nested in type.NestedTypes) InspectPublicType(nested);
+        }
+        foreach (var type in binary.MainModule.Types) InspectPublicType(type);
+        if (privateTypes.Count > 0 || privateStrings.Count > 0)
+            throw new InvalidDataException("Public package contains private tooling: " + string.Join(", ", privateTypes.Concat(privateStrings)));
+        Console.WriteLine("Public package separation: no private-tool types, activation settings or entry-point strings.");
+    }
     var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(path));
     foreach (var type in assembly.GetTypes())
     {

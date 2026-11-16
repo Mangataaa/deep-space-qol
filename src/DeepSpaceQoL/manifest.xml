@@ -3,8 +3,8 @@
   <ID>deep_space_qol</ID>
   <Name>深空管家 / Deep Space QoL</Name>
   <Author>Deep Space QoL contributors</Author>
-  <ModVersion>0.5.1</ModVersion>
-  <Description>违禁品买家与超科技走私犯夜间服务免冷却，水瓶打印机新增原生6L空水壶。保留每日逐项顾客、枪械一键改装、悬挂陈列、鉴定、箱内提示、剧情保护、分类收纳和右键装瓶。</Description>
+  <ModVersion>0.7.3</ModVersion>
+  <Description>分析仪底部一键配比：按真实成分补酒精、沉淀中和，手动加热过滤后重算提纯；批量制药可指定储物页，箱体正面显示名称。保留剧情与卢保护。</Description>
   <GameVersions><Version>0.46</Version></GameVersions>
   <Prerequisites />
   <Assemblies><Assembly>DeepSpaceQoL.dll</Assembly></Assemblies>

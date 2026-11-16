@@ -12,7 +12,7 @@ internal sealed class StoragePage
     { Owner = owner; Index = index; Inventory = inventory; this.rootName = rootName; }
     public PageRule Rule => Owner == null ? new PageRule() : StorageRules.Policy(Owner).Page(Index);
     public string Name => Owner == null ? rootName :
-        $"{Owner.GetDisplayName(true)} #{Owner.uniqueId} / {StorageExpansionHelper.GetTabName(Owner, Index) ?? (!string.IsNullOrEmpty(Rule.Label) ? Rule.Label : "页 " + (Index + 1))}";
+        $"{(string.IsNullOrWhiteSpace(StorageRules.Policy(Owner).ContainerName) ? Owner.GetDisplayName(true) : StorageRules.Policy(Owner).ContainerName)} #{Owner.uniqueId} / {StorageExpansionHelper.GetTabName(Owner, Index) ?? (!string.IsNullOrEmpty(Rule.Label) ? Rule.Label : "页 " + (Index + 1))}";
 }
 
 /// <summary>Owned shop inventories and storage pages; excludes loose hidden/showcase goods and trade offers.</summary>

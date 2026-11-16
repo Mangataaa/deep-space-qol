@@ -28,7 +28,7 @@ public sealed class ModEntry : IMod
             () => "按各来源原概率分别判定，突破原普通顾客配额；不足原名额则随机补足。仅影响下一次每日排程，不重抽今天，不改变剧情来客。");
         removeServiceCooldowns = config.Define("remove_illegal_service_cooldowns", true, "顾客", () => "取消违禁品买家和超科技走私犯服务冷却",
             () => "默认开启。两项夜间服务可连续选择，旧存档剩余冷却也忽略；仍需解锁、勾选并支付原费用。不修改存档冷却计数，关闭后恢复原判定。");
-        Log.Log("深空管家 0.5.1：违禁品买家与超科技走私犯服务免冷却；水瓶打印机可打印原生6L空水壶。保留既有上货、收纳、鉴定与悬挂功能。");
+        Log.Log("深空管家 0.7.3：分析仪底部一键配比、批量制药与箱体命名，保留原生化学流程及剧情保护。");
     }
 
     public void OnEnable()
@@ -64,6 +64,9 @@ public sealed class ModEntry : IMod
 
     public void OnDisable()
     {
+        NativeChemicalMix.Dispose();
+        ChemicalBatchService.Cancel();
+        NativeChemicalBatch.Dispose();
         StowService.Cancel();
         GunModdingService.Cancel();
         NativeGunModding.Dispose();
@@ -76,6 +79,7 @@ public sealed class ModEntry : IMod
         ModHelper.RemoveDebugFunctions(Id);
         ModHelper.RemoveGameOptions(Id);
         NativeStorageLabels.Dispose();
+        NativeStorageNaming.Dispose();
         NativeInventoryButtons.Dispose();
         NativeBottlingMenu.Dispose();
         NativeFeedback.Dispose();
@@ -93,6 +97,9 @@ public sealed class ModEntry : IMod
 
     private static void OnLoaded()
     {
+        NativeChemicalMix.Dispose();
+        ChemicalBatchService.Cancel();
+        NativeChemicalBatch.Dispose();
         StowService.Cancel();
         GunModdingService.Cancel();
         NativeGunModding.Dispose();
@@ -100,6 +107,7 @@ public sealed class ModEntry : IMod
         NativeWaterJugPrinter.Dispose();
         NativeDisplayFixtures.ResetForLoad();
         NativeStorageLabels.Dispose();
+        NativeStorageNaming.Dispose();
         NativeInventoryButtons.Dispose();
         NativeBottlingMenu.Dispose();
         NativeFeedback.Dispose();
@@ -129,6 +137,7 @@ public sealed class ModEntry : IMod
                 nextUiRefresh = Time.unscaledTime + 0.3f;
                 RefreshUi(NativeInventoryButtons.Refresh, "库存按钮");
                 RefreshUi(NativeStorageLabels.Refresh, "储物标签");
+                RefreshUi(NativeStorageNaming.Refresh, "储物箱名称");
                 RefreshUi(NativeFeedback.Refresh, "操作提示");
                 RefreshUi(NativeAppraisal.Refresh, "价格鉴定");
                 RefreshUi(NativeAuthenticity.Refresh, "真伪鉴定");
@@ -139,6 +148,8 @@ public sealed class ModEntry : IMod
                 RefreshUi(NativeDailyVisitors.Refresh, "预期顾客规则");
                 RefreshUi(NativeGunModding.Refresh, "一键改装");
                 RefreshUi(NativeWaterJugPrinter.Refresh, "打印水壶");
+                RefreshUi(NativeChemicalBatch.Refresh, "批量制药");
+                RefreshUi(NativeChemicalMix.Refresh, "化学配比");
             }
             if (Typing()) continue;
             if (Down(panelKey)) ControlPanel.Toggle();
@@ -187,9 +198,9 @@ public sealed class ModEntry : IMod
 
     private static void ExecuteCore(Func<string> action, bool allowPinMode)
     {
-        if (busy || StowService.IsRunning || GunModdingService.IsRunning)
+        if (busy || StowService.IsRunning || GunModdingService.IsRunning || ChemicalBatchService.IsRunning || ChemicalMixService.IsRunning)
         {
-            ControlPanel.Status(StowService.IsRunning ? StowService.CurrentStatus : GunModdingService.IsRunning ? GunModdingService.CurrentStatus : "正在执行上一项操作。");
+            ControlPanel.Status(StowService.IsRunning ? StowService.CurrentStatus : GunModdingService.IsRunning ? GunModdingService.CurrentStatus : ChemicalBatchService.IsRunning ? ChemicalBatchService.CurrentStatus : ChemicalMixService.IsRunning ? ChemicalMixService.Status : "正在执行上一项操作。");
             return;
         }
         if (!Ready(out string reason, allowPinMode)) { ControlPanel.Status(reason); return; }
